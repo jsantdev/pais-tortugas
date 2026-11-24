@@ -42,6 +42,7 @@ const COMMENTS_FILE = path.join(__dirname, 'comentarios.txt');
 const COUNTRY_INTERACTIONS_FILE = path.join(__dirname, 'interacciones-paises.txt');
 const COMMENTS_HEADER = 'Fecha UTC\tUsuario\tID TikTok\tComentario\n';
 const COUNTRY_INTERACTIONS_HEADER = 'Fecha UTC\tPais ID\tPais\tEventos\n';
+const MAX_COUNTRIES_PER_RACE = 10;
 const AUTH_COOKIE = 'turtle_admin';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const sessions = new Map();
@@ -255,8 +256,9 @@ function tsvValue(value) {
 }
 
 function persistCountryInteractions(data) {
-  if (!data || !Array.isArray(data.countries) || data.countries.length < 1 || data.countries.length > 5) {
-    throw new Error('El resultado debe incluir entre 1 y 5 países.');
+  if (!data || !Array.isArray(data.countries) || data.countries.length < 1 ||
+      data.countries.length > MAX_COUNTRIES_PER_RACE) {
+    throw new Error(`El resultado debe incluir entre 1 y ${MAX_COUNTRIES_PER_RACE} países.`);
   }
   const seenCountryIds = new Set();
   const countries = data.countries.map((country) => {

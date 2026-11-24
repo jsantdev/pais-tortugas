@@ -330,7 +330,7 @@ const POOL = [
  {id:'iq',name:'Irak',alias:['irak','iraq','🇮🇶'],flag:H(['#ce1126','#fff','#000'])+'<rect x="44" y="40" width="32" height="5" fill="#007a3d"/>'},
  {id:'bh',name:'Baréin',alias:['bahrein','baréin','bahrain','🇧🇭'],flag:R('#ce1126')+zig(48,'#fff')}
 ];
-const MIN_LANES = 3, MAX_LANES = 8;   // carrera con 3 a 8 países (mínimo 3 sí o sí; máximo 8)
+const MIN_LANES = 3, MAX_LANES = 10;   // mínimo 3 países; admite hasta 10 si se nombran en el chat
 const ALL_BASE = [...BASE, ...POOL];
 /* Catálogo completo (ONU + Palestina, Taiwán, Kosovo, Vaticano). Banderas simplificadas con un mini-lenguaje:
    H/V = franjas horizontales/verticales, R = color liso (letras = colores)  |  overlays: T/t triángulo, C/c círculo, Z círculo al asta,
@@ -717,7 +717,7 @@ function initializeRace(previousResults, fromHistory){
   reset();
 }
 
-/* Reparte el alto vertical disponible entre los carriles (mín. 150 px; con más de 4-5 carriles el overlay entero se reescala para entrar, hasta 8) */
+/* Reparte el alto vertical disponible entre los carriles (mín. 150 px; el overlay se reescala para admitir hasta 10) */
 function layoutVertical(){
   const app = document.getElementById('app'), cs = getComputedStyle(document.documentElement), px = v => parseFloat(cs.getPropertyValue(v)) || 0;
   const n = Math.max(1, COUNTRIES.length);
@@ -1254,7 +1254,7 @@ function prepareNextRace(){
     name:c.name,
     interactions:countryInteractions[c.id] || 0
   }));
-  /* Próxima carrera = TODOS los países que interactuaron (hasta 8, sean 4, 6 u 8).
+  /* Próxima carrera = TODOS los países que interactuaron (hasta 10).
      Si interactuaron menos de 3, se completa hasta 3 con los demás países de esta carrera (los de más actividad primero). */
   const sorted = [...results].sort((a,b)=>b.interactions-a.interactions);
   const active = sorted.filter(r=>r.interactions > 0).slice(0, MAX_LANES);
@@ -1317,7 +1317,7 @@ function onChat(user, text, avatar, name){
   const now = Date.now();               // COOLDOWN: dentro del límite no suma impulso ni avisos
   if(now - (lastChatAt[user] || 0) < CONFIG.USER_COOLDOWN_MS) return;
   lastChatAt[user] = now;
-  const list = countriesFor(text).filter(addCountryToRace);   // sin país, o carrera llena (8): comentario normal
+  const list = countriesFor(text).filter(addCountryToRace);   // sin país, o carrera llena (10): comentario normal
   if(!list.length){
     SFX.play('chat');
     const g = ensureCountry(user);
