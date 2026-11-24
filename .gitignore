@@ -1,4 +1,6 @@
 .env
+config.json
+config.json.tmp
 comentarios.txt
 interacciones-paises.txt
 node_modules/

@@ -20,6 +20,6 @@ Inicia el servidor indicando el usuario de TikTok:
 TIKTOK_USERNAME=tu_usuario HOST=127.0.0.1 PORT=21213 npm start
 ```
 
-Abre `http://127.0.0.1:21213` en el navegador del teléfono. Si el panel solicita una contraseña, usa la que el servidor muestra al iniciarse en Termux. Para detenerlo, pulsa `Ctrl+C`.
+Abre `http://127.0.0.1:21213` en el navegador del teléfono. El login empieza desactivado; desde la sección **Acceso al panel** puedes activarlo y cambiar la contraseña. La configuración se guarda en `config.json` y se conserva al reiniciar. La contraseña inicial es `123456789`.
 
-No publiques ni compartas tu archivo `.env`; se mantiene fuera del repositorio.
+Antes de exponer el servidor mediante un túnel o una red pública, activa el login y establece una contraseña propia y segura. No publiques ni compartas `config.json` ni `.env`; ambos se mantienen fuera del repositorio.
