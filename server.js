@@ -1,7 +1,9 @@
 const http = require('http');
+const net = require('net');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { spawnSync } = require('child_process');
 const { WebSocketServer, WebSocket } = require('ws');
 
 let WebcastPushConnection;
@@ -44,6 +46,89 @@ const AUTH_COOKIE = 'turtle_admin';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const sessions = new Map();
 const loginAttempts = new Map();
+
+function listeningProcessIds() {
+  if (process.platform === 'win32') {
+    const result = spawnSync('netstat', ['-ano', '-p', 'tcp'], { encoding: 'utf8' });
+    if (result.error) throw result.error;
+    if (result.status !== 0) throw new Error(result.stderr || 'No se pudo consultar netstat.');
+    const processIds = [];
+    for (const line of result.stdout.split(/\r?\n/)) {
+      const match = line.match(/^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)\s*$/i);
+      if (match && Number(match[1]) === PORT) processIds.push(Number(match[2]));
+    }
+    return [...new Set(processIds)];
+  }
+
+  const result = spawnSync('lsof', ['-nP', '-t', `-iTCP:${PORT}`, '-sTCP:LISTEN'], {
+    encoding: 'utf8',
+  });
+  if (result.error) {
+    if (result.error.code === 'ENOENT') {
+      throw new Error('Instala lsof para liberar el puerto automáticamente: pkg install lsof');
+    }
+    throw result.error;
+  }
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(result.stderr || 'No se pudo consultar lsof.');
+  }
+  return [...new Set(result.stdout.split(/\s+/).filter((value) => /^\d+$/.test(value)).map(Number))];
+}
+
+function probePort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', reject);
+    probe.listen(PORT, HOST, () => {
+      probe.close((error) => error ? reject(error) : resolve());
+    });
+  });
+}
+
+function forceStopProcess(processId) {
+  if (processId === process.pid) return;
+  if (process.platform === 'win32') {
+    const result = spawnSync('taskkill', ['/PID', String(processId), '/F'], { encoding: 'utf8' });
+    if (result.error) throw result.error;
+    if (result.status !== 0) {
+      throw new Error(result.stderr || `No se pudo terminar el proceso ${processId}.`);
+    }
+    return;
+  }
+  try {
+    process.kill(processId, 'SIGKILL');
+  } catch (error) {
+    if (error.code !== 'ESRCH') throw error;
+  }
+}
+
+async function clearOccupiedPort() {
+  try {
+    await probePort();
+    return;
+  } catch (error) {
+    if (error.code !== 'EADDRINUSE') throw error;
+  }
+
+  const processIds = listeningProcessIds().filter((processId) => processId !== process.pid);
+  if (processIds.length === 0) {
+    throw new Error(`El puerto ${PORT} está ocupado, pero no se pudo identificar el proceso.`);
+  }
+  console.warn(`Puerto ${PORT} ocupado; terminando a la fuerza el/los PID: ${processIds.join(', ')}.`);
+  processIds.forEach(forceStopProcess);
+
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    try {
+      await probePort();
+      return;
+    } catch (error) {
+      if (error.code !== 'EADDRINUSE') throw error;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  }
+  throw new Error(`No se pudo liberar el puerto ${PORT} después de terminar los procesos.`);
+}
 
 function saveAuthSettings(settings) {
   const temporaryFile = `${AUTH_CONFIG_FILE}.tmp`;
@@ -745,12 +830,25 @@ wss.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`Servidor HTTP/WebSocket activo en http://${HOST}:${PORT}`);
-  console.log(`Overlay: http://${HOST}:${PORT}/overlay`);
-  console.log(`Configuracion: http://${HOST}:${PORT}/config`);
-  connectTikTok(DEFAULT_USERNAME).catch((error) => {
-    state.status = 'failed';
-    state.error = error.message;
+async function startServer() {
+  await clearOccupiedPort();
+  server.listen(PORT, HOST, () => {
+    console.log(`Servidor HTTP/WebSocket activo en http://${HOST}:${PORT}`);
+    console.log(`Overlay: http://${HOST}:${PORT}/overlay`);
+    console.log(`Configuracion: http://${HOST}:${PORT}/config`);
+    connectTikTok(DEFAULT_USERNAME).catch((error) => {
+      state.status = 'failed';
+      state.error = error.message;
+    });
   });
+}
+
+wss.on('error', (error) => {
+  console.error(`Error del servidor HTTP/WebSocket: ${error.message}`);
+  process.exitCode = 1;
+});
+
+startServer().catch((error) => {
+  console.error(`No se pudo iniciar el servidor: ${error.message}`);
+  process.exitCode = 1;
 });
