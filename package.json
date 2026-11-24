@@ -1,0 +1,18 @@
+{
+  "name": "carrera-tortugas-tiktok-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend WebSocket para el overlay Carrera de tortugas",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "^2.1.1",
+    "ws": "^8.18.3"
+  }
+}

@@ -1,0 +1,5 @@
+.env
+comentarios.txt
+interacciones-paises.txt
+node_modules/
+npm-debug.log*

@@ -1,0 +1,20 @@
+{
+  "name": "Carrera de tortugas",
+  "short_name": "Tortugas",
+  "description": "Carrera interactiva de tortugas para TikTok Live",
+  "start_url": "/overlay",
+  "scope": "/",
+  "display_override": ["fullscreen", "standalone"],
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#edf7ef",
+  "theme_color": "#4f9d52",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
