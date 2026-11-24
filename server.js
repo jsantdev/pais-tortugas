@@ -63,16 +63,57 @@ function listeningProcessIds() {
   const result = spawnSync('lsof', ['-nP', '-t', `-iTCP:${PORT}`, '-sTCP:LISTEN'], {
     encoding: 'utf8',
   });
-  if (result.error) {
-    if (result.error.code === 'ENOENT') {
-      throw new Error('Instala lsof para liberar el puerto automáticamente: pkg install lsof');
-    }
-    throw result.error;
-  }
-  if (result.status !== 0 && result.status !== 1) {
+  if (result.error && result.error.code !== 'ENOENT') throw result.error;
+  if (!result.error && result.status !== 0 && result.status !== 1) {
     throw new Error(result.stderr || 'No se pudo consultar lsof.');
   }
-  return [...new Set(result.stdout.split(/\s+/).filter((value) => /^\d+$/.test(value)).map(Number))];
+  const lsofProcessIds = result.error
+    ? []
+    : [...new Set(result.stdout.split(/\s+/).filter((value) => /^\d+$/.test(value)).map(Number))];
+  if (lsofProcessIds.length > 0) return lsofProcessIds;
+
+  const socketInodes = new Set();
+  for (const table of ['/proc/net/tcp', '/proc/net/tcp6']) {
+    let contents;
+    try {
+      contents = fs.readFileSync(table, 'utf8');
+    } catch (error) {
+      if (error.code === 'ENOENT') continue;
+      throw error;
+    }
+    for (const line of contents.split(/\r?\n/).slice(1)) {
+      const fields = line.trim().split(/\s+/);
+      if (fields.length < 10 || fields[3] !== '0A') continue;
+      const localPort = Number.parseInt(fields[1].slice(fields[1].lastIndexOf(':') + 1), 16);
+      if (localPort === PORT && /^\d+$/.test(fields[9])) socketInodes.add(fields[9]);
+    }
+  }
+  if (socketInodes.size === 0) return [];
+
+  const processIds = new Set();
+  for (const entry of fs.readdirSync('/proc', { withFileTypes: true })) {
+    if (!entry.isDirectory() || !/^\d+$/.test(entry.name)) continue;
+    let descriptors;
+    try {
+      descriptors = fs.readdirSync(path.join('/proc', entry.name, 'fd'));
+    } catch (error) {
+      if (['ENOENT', 'EACCES', 'EPERM'].includes(error.code)) continue;
+      throw error;
+    }
+    for (const descriptor of descriptors) {
+      try {
+        const target = fs.readlinkSync(path.join('/proc', entry.name, 'fd', descriptor));
+        const match = target.match(/^socket:\[(\d+)\]$/);
+        if (match && socketInodes.has(match[1])) {
+          processIds.add(Number(entry.name));
+          break;
+        }
+      } catch (error) {
+        if (!['ENOENT', 'EACCES', 'EPERM'].includes(error.code)) throw error;
+      }
+    }
+  }
+  return [...processIds];
 }
 
 function probePort() {
