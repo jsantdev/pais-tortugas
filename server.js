@@ -184,13 +184,14 @@ function loadAuthSettings() {
   try {
     const settings = JSON.parse(fs.readFileSync(AUTH_CONFIG_FILE, 'utf8'));
     if (!settings || typeof settings.adminPassword !== 'string' || !settings.adminPassword ||
-        typeof settings.loginEnabled !== 'boolean') {
-      throw new Error('config.json debe incluir adminPassword y loginEnabled válidos.');
+        typeof settings.loginEnabled !== 'boolean' ||
+        (settings.showCommentBox !== undefined && typeof settings.showCommentBox !== 'boolean')) {
+      throw new Error('config.json debe incluir adminPassword y loginEnabled válidos, y showCommentBox debe ser booleano.');
     }
-    return settings;
+    return { ...settings, showCommentBox: settings.showCommentBox === true };
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
-    const settings = { adminPassword: DEFAULT_ADMIN_PASSWORD, loginEnabled: false };
+    const settings = { adminPassword: DEFAULT_ADMIN_PASSWORD, loginEnabled: false, showCommentBox: false };
     saveAuthSettings(settings);
     return settings;
   }
@@ -642,15 +643,15 @@ function serveConfig(res) {
   });
   res.end(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Conexión TikTok</title><style>
 :root{font-family:system-ui,sans-serif;color:#17351d;background:#edf7ef}*{box-sizing:border-box}body{margin:0;min-height:100vh}main{width:min(850px,calc(100% - 28px));margin:14px auto;padding:18px;border:1px solid #a8c5aa;border-radius:12px;background:#fff}h1{font-size:20px;margin:0 0 14px}h2{font-size:16px;margin:0 0 8px}label{display:block;font-size:13px;font-weight:800;margin-bottom:6px}input{width:100%;padding:9px;font-size:15px;border:1px solid #a7baa8;border-radius:7px}.actions{display:flex;gap:7px;margin-top:9px}button{border:0;border-radius:7px;padding:8px 12px;font-weight:800;cursor:pointer}#connect{background:#4f9d52;color:white}#disconnect{background:#e7eee8}#overlay,#countries,#install{width:100%;margin-top:9px;background:#1f6f43;color:white}#status,#fileStatus,#settingsStatus{margin-top:10px;font-size:13px;color:#425347}#log,.fileContent{margin:8px 0 0;padding:8px 10px;min-height:48px;max-height:230px;overflow:auto;border-radius:7px;background:#f3f7f3;font-family:ui-monospace,monospace;font-size:11px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.fileGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:16px}.fileCard{min-width:0;padding:12px;border:1px solid #c5d8c6;border-radius:9px}.fileActions{display:flex;gap:7px;margin-top:8px}.fileActions button{flex:1;background:#e7eee8}.fileActions .clear{background:#a33;color:white}.fileContent:empty::before{content:"Sin registros"}#authSettings{margin-top:16px}#authSettings input[type=checkbox]{width:auto;margin:0 7px 0 0}#authSettings #saveSettings{margin-top:8px;background:#1f6f43;color:white}
-</style><meta name="theme-color" content="#4f9d52"><link rel="manifest" href="/manifest.webmanifest"></head><body><main><h1>Conexión TikTok</h1><label for="username">Usuario</label><input id="username" placeholder="usuario_del_live" autocomplete="off"><div class="actions"><button id="connect">Conectar</button><button id="disconnect">Desconectar</button></div><button id="overlay">Abrir overlay</button><button id="countries">🏳️ Países y banderas</button><button id="install" hidden>Instalar en Android</button><div id="status">Consultando…</div><pre id="log"></pre><section class="fileCard" id="authSettings"><h2>Acceso al panel</h2><label><input id="loginEnabled" type="checkbox">Exigir contraseña para el panel</label><label for="adminPassword">Nueva contraseña (deja vacío para conservarla)</label><input id="adminPassword" type="password" autocomplete="new-password" maxlength="256"><button id="saveSettings">Guardar ajustes</button><div id="settingsStatus" role="status"></div></section><section class="fileGrid">
+</style><meta name="theme-color" content="#4f9d52"><link rel="manifest" href="/manifest.webmanifest"></head><body><main><h1>Conexión TikTok</h1><label for="username">Usuario</label><input id="username" placeholder="usuario_del_live" autocomplete="off"><div class="actions"><button id="connect">Conectar</button><button id="disconnect">Desconectar</button></div><button id="overlay">Abrir overlay</button><button id="countries">🏳️ Países y banderas</button><button id="install" hidden>Instalar en Android</button><div id="status">Consultando…</div><pre id="log"></pre><section class="fileCard" id="authSettings"><h2>Acceso y visualización</h2><label><input id="loginEnabled" type="checkbox">Exigir contraseña para el panel</label><label><input id="showCommentBox" type="checkbox">Mostrar cuadro de comentarios en el overlay</label><label for="adminPassword">Nueva contraseña (deja vacío para conservarla)</label><input id="adminPassword" type="password" autocomplete="new-password" maxlength="256"><button id="saveSettings">Guardar ajustes</button><div id="settingsStatus" role="status"></div></section><section class="fileGrid">
 <article class="fileCard"><h2>Comentarios del live</h2><pre class="fileContent" id="commentsFile"></pre><div class="fileActions"><button id="copyComments">Copiar comentarios</button><button class="clear" id="clearComments">Vaciar archivo</button></div></article>
 <article class="fileCard"><h2>Interacciones por país</h2><pre class="fileContent" id="interactionsFile"></pre><div class="fileActions"><button id="copyInteractions">Copiar interacciones</button><button class="clear" id="clearInteractions">Vaciar archivo</button></div></article>
 </section><div id="fileStatus" role="status"></div></main><script>
 const username=document.querySelector('#username'),status=document.querySelector('#status'),log=document.querySelector('#log');
 async function refresh(){const r=await fetch('/api/status',{cache:'no-store'});if(r.status===401){location.replace('/login');return}const s=await r.json();username.value=username.value||s.username||'';status.textContent='Estado: '+s.status+(s.error?' — '+s.error:'');log.textContent=(s.log||[]).join('\\n')}
-const loginEnabled=document.querySelector('#loginEnabled'),adminPassword=document.querySelector('#adminPassword'),settingsStatus=document.querySelector('#settingsStatus');
-async function refreshSettings(){const r=await fetch('/api/settings',{cache:'no-store'});if(r.status===401){location.replace('/login');return}const s=await r.json();if(!r.ok)throw new Error(s.error||'No se pudieron leer los ajustes');loginEnabled.checked=s.loginEnabled}
-document.querySelector('#saveSettings').onclick=async()=>{settingsStatus.textContent='Guardando…';try{const r=await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({loginEnabled:loginEnabled.checked,password:adminPassword.value})});const result=await r.json();if(r.status===401){location.replace('/login');return}if(!r.ok)throw new Error(result.error||'No se pudieron guardar los ajustes');adminPassword.value='';loginEnabled.checked=result.loginEnabled;settingsStatus.textContent='Ajustes guardados';}catch(e){settingsStatus.textContent=e.message}};
+const loginEnabled=document.querySelector('#loginEnabled'),showCommentBox=document.querySelector('#showCommentBox'),adminPassword=document.querySelector('#adminPassword'),settingsStatus=document.querySelector('#settingsStatus');
+async function refreshSettings(){const r=await fetch('/api/settings',{cache:'no-store'});if(r.status===401){location.replace('/login');return}const s=await r.json();if(!r.ok)throw new Error(s.error||'No se pudieron leer los ajustes');loginEnabled.checked=s.loginEnabled;showCommentBox.checked=s.showCommentBox}
+document.querySelector('#saveSettings').onclick=async()=>{settingsStatus.textContent='Guardando…';try{const r=await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({loginEnabled:loginEnabled.checked,showCommentBox:showCommentBox.checked,password:adminPassword.value})});const result=await r.json();if(r.status===401){location.replace('/login');return}if(!r.ok)throw new Error(result.error||'No se pudieron guardar los ajustes');adminPassword.value='';loginEnabled.checked=result.loginEnabled;showCommentBox.checked=result.showCommentBox;settingsStatus.textContent='Ajustes guardados';}catch(e){settingsStatus.textContent=e.message}};
 const fileStatus=document.querySelector('#fileStatus');
 async function fetchFile(file){const r=await fetch('/api/logs/'+file,{cache:'no-store'});const d=await r.json();if(r.status===401){location.replace('/login');throw new Error('Sesión finalizada')}if(!r.ok)throw new Error(d.error||'No se pudo leer el archivo');document.querySelector(file==='comments'?'#commentsFile':'#interactionsFile').textContent=d.content}
 async function refreshFiles(){try{await Promise.all([fetchFile('comments'),fetchFile('interactions')]);fileStatus.textContent='Archivos actualizados'}catch(e){fileStatus.textContent=e.message}}
@@ -770,7 +771,10 @@ const server = http.createServer(async (req, res) => {
   if (adminRoute && !requireAdmin(req, res)) return;
 
   if (req.method === 'GET' && url.pathname === '/api/settings') {
-    return json(res, 200, { loginEnabled: authSettings.loginEnabled });
+    return json(res, 200, {
+      loginEnabled: authSettings.loginEnabled,
+      showCommentBox: authSettings.showCommentBox,
+    });
   }
   if (req.method === 'GET' && url.pathname === '/api/simulation') {
     return json(res, 200, { enabled: simulationTimer !== null, eventsPerMinute: 100 });
@@ -796,6 +800,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 400, { error: error.message });
     }
     if (!payload || typeof payload.loginEnabled !== 'boolean' ||
+        (payload.showCommentBox !== undefined && typeof payload.showCommentBox !== 'boolean') ||
         (payload.password !== undefined &&
           (typeof payload.password !== 'string' || payload.password.length > 256))) {
       return json(res, 400, { error: 'Los ajustes de acceso no son válidos.' });
@@ -803,6 +808,9 @@ const server = http.createServer(async (req, res) => {
 
     const nextSettings = {
       loginEnabled: payload.loginEnabled,
+      showCommentBox: payload.showCommentBox === undefined
+        ? authSettings.showCommentBox
+        : payload.showCommentBox,
       adminPassword: payload.password ? payload.password : authSettings.adminPassword,
     };
     try {
@@ -813,7 +821,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     authSettings.loginEnabled = nextSettings.loginEnabled;
+    authSettings.showCommentBox = nextSettings.showCommentBox;
     authSettings.adminPassword = nextSettings.adminPassword;
+    broadcast('overlay-settings', { showCommentBox: authSettings.showCommentBox });
     sessions.clear();
     loginAttempts.clear();
     if (authSettings.loginEnabled) {
@@ -824,7 +834,11 @@ const server = http.createServer(async (req, res) => {
     } else {
       setSessionCookie(req, res, '', 0);
     }
-    return json(res, 200, { ok: true, loginEnabled: authSettings.loginEnabled });
+    return json(res, 200, {
+      ok: true,
+      loginEnabled: authSettings.loginEnabled,
+      showCommentBox: authSettings.showCommentBox,
+    });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/logs/comments') {
@@ -913,6 +927,7 @@ const wss = new WebSocketServer({ server });
 wss.on('connection', (socket) => {
   socket.send(JSON.stringify({ event: 'status', data: { ...state, log: connectionLog } }));
   socket.send(JSON.stringify({ event: 'race-history', data: { countries: latestCountryInteractions } }));
+  socket.send(JSON.stringify({ event: 'overlay-settings', data: { showCommentBox: authSettings.showCommentBox } }));
   socket.on('message', (message) => {
     try {
       const payload = JSON.parse(message.toString());

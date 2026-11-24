@@ -708,10 +708,18 @@ function initializeRace(previousResults, fromHistory){
 function layoutVertical(){
   const app = document.getElementById('app'), cs = getComputedStyle(document.documentElement), px = v => parseFloat(cs.getPropertyValue(v)) || 0;
   const n = Math.max(1, COUNTRIES.length);
-  const others = document.getElementById('bar').offsetHeight + 10 + document.querySelector('.comment-lane').offsetHeight + 8;
+  const commentLane = document.querySelector('.comment-lane');
+  const others = document.getElementById('bar').offsetHeight + 10 +
+    (commentLane.hidden ? 0 : commentLane.offsetHeight + 8);
   const avail = 1280 - px('--safe-t') - px('--safe-b') - others - 8*(n-1);
   const lh = Math.max(150, Math.min(230, Math.floor(avail / n)));
   document.getElementById('track').style.setProperty('--lane', lh + 'px');
+}
+function setCommentBoxEnabled(enabled){
+  const commentLane = document.querySelector('.comment-lane');
+  commentLane.hidden = !enabled;
+  render();
+  fitScreen();
 }
 function render(){
   layoutVertical();
@@ -1442,6 +1450,10 @@ function connectWS(url){
       try{
         const msg = JSON.parse(m.data), d = msg.data || msg, ev = msg.event || msg.type;
         if(ev === 'race-history'){ initializeRace(d.countries, true); return; }
+        if(ev === 'overlay-settings'){
+          if(typeof d.showCommentBox === 'boolean') setCommentBoxEnabled(d.showCommentBox);
+          return;
+        }
         if(ev === 'race-result-saved'){
           if(pendingRaceResult && pendingRaceResult.raceId === d.raceId) pendingRaceResult = null;
           return;
