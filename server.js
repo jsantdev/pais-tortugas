@@ -46,6 +46,8 @@ const AUTH_COOKIE = 'turtle_admin';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const sessions = new Map();
 const loginAttempts = new Map();
+let simulationTimer = null;
+let simulationEventIndex = 0;
 
 function listeningProcessIds() {
   if (process.platform === 'win32') {
@@ -427,6 +429,34 @@ function chatPayload(data) {
   };
 }
 
+const TEST_AVATAR = 'data:image/svg+xml;base64,' + Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="32" fill="#4f9d52"/><circle cx="32" cy="24" r="12" fill="#fff"/><path d="M10 62c2-15 10-23 22-23s20 8 22 23" fill="#fff"/></svg>',
+  ).toString('base64');
+function testUser(index) {
+  return {
+    uniqueId: index === undefined ? 'test_tortuga' : `test_tortuga_${index + 1}`,
+    nickname: index === undefined ? 'Prueba' : `Prueba ${index + 1}`,
+    profilePictureUrl: TEST_AVATAR,
+  };
+}
+
+function broadcastSimulationEvent() {
+  const eventType = ['chat', 'like', 'follow', 'share', 'gift'][simulationEventIndex % 5];
+  const user = testUser(Math.floor(simulationEventIndex / 5) % 10);
+  simulationEventIndex++;
+  if (eventType === 'chat') return broadcast('chat', chatPayload({ ...user, content: 'Colombia' }));
+  if (eventType === 'like') return broadcast('like', { ...user, likeCount: 1 });
+  if (eventType === 'gift') return broadcast('gift', { ...user, repeatCount: 1 });
+  return broadcast(eventType, user);
+}
+
+function setSimulationEnabled(enabled) {
+  if (simulationTimer) clearInterval(simulationTimer);
+  simulationTimer = null;
+  if (enabled) simulationTimer = setInterval(broadcastSimulationEvent, 600);
+  return simulationTimer !== null;
+}
+
 function saveComment(data) {
   const comment = String(data.comment || '');
   if (!comment.trim()) return;
@@ -628,8 +658,15 @@ document.querySelector('#connect').onclick=async()=>{status.textContent='Conecta
 document.querySelector('#disconnect').onclick=async()=>{await fetch('/api/disconnect',{method:'POST'});await refresh()};
 document.querySelector('#overlay').onclick=()=>{const socket=(location.protocol==='https:'?'wss://':'ws://')+location.host;window.open('/overlay?ws='+encodeURIComponent(socket),'_blank','noopener')};
 document.querySelector('#countries').onclick=()=>window.open('/overlay?countries=1','_blank','noopener');
-document.querySelector('#overlay').insertAdjacentHTML('afterend','<button id="testevents" style="width:100%;margin-top:7px">Prueba todos los eventos</button>');
-document.querySelector('#testevents').onclick=async()=>{await fetch('/api/test-events',{method:'POST'});};
+document.querySelector('#overlay').insertAdjacentHTML('afterend','<div style="display:flex;gap:7px;margin-top:7px"><button id="testavatar" style="flex:1;background:#e8f3e9;padding:6px 8px;font-size:12px">Test avatar en pista</button><button id="testevents" style="flex:1;background:#e8f3e9;padding:6px 8px;font-size:12px">Prueba todos los eventos</button><button id="simulator" style="flex:1;background:#e8f3e9;padding:6px 8px;font-size:12px">Activar 100 ev/min</button></div><div id="testStatus" role="status" style="margin-top:4px;font-size:12px"></div><div id="simulationStatus" role="status" style="font-size:12px"></div>');
+async function sendTest(path,message){const testStatus=document.querySelector('#testStatus');testStatus.textContent='Enviando prueba…';try{const r=await fetch(path,{method:'POST'});const result=await r.json();if(r.status===401){location.replace('/login');return}if(!r.ok)throw new Error(result.error||'No se pudo enviar la prueba');testStatus.textContent=message}catch(error){testStatus.textContent=error.message}}
+document.querySelector('#testavatar').onclick=()=>sendTest('/api/test-avatar','Avatar de prueba enviado a la pista');
+document.querySelector('#testevents').onclick=()=>sendTest('/api/test-events','Prueba de eventos enviada');
+const simulator=document.querySelector('#simulator'),simulationStatus=document.querySelector('#simulationStatus');
+let simulationEnabled=false;
+function renderSimulation(){simulator.textContent=simulationEnabled?'Detener 100 ev/min':'Activar 100 ev/min';simulationStatus.textContent=simulationEnabled?'Simulación activa: 100 eventos/minuto':'Simulación detenida'}
+async function refreshSimulation(){const r=await fetch('/api/simulation',{cache:'no-store'});const result=await r.json();if(r.status===401){location.replace('/login');return}if(!r.ok)throw new Error(result.error||'No se pudo consultar la simulación');simulationEnabled=result.enabled;renderSimulation()}
+simulator.onclick=async()=>{simulator.disabled=true;simulationStatus.textContent='Actualizando simulación…';try{const r=await fetch('/api/simulation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:!simulationEnabled})});const result=await r.json();if(r.status===401){location.replace('/login');return}if(!r.ok)throw new Error(result.error||'No se pudo cambiar la simulación');simulationEnabled=result.enabled;renderSimulation()}catch(error){simulationStatus.textContent=error.message}finally{simulator.disabled=false}};
 document.querySelector('#copyComments').onclick=()=>copyFile('comments','Comentarios');
 document.querySelector('#copyInteractions').onclick=()=>copyFile('interactions','Interacciones');
 document.querySelector('#clearComments').onclick=()=>clearFile('comments','comentarios');
@@ -642,7 +679,7 @@ installButton.onclick=async()=>{if(!installPrompt)return;installPrompt.prompt();
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){
   navigator.serviceWorker.register('/sw.js').catch(error=>console.error('No se pudo registrar la app instalable',error));
 }
-refresh();refreshSettings().catch(error=>settingsStatus.textContent=error.message);refreshFiles();setInterval(refresh,3000);setInterval(refreshFiles,5000);
+refresh();refreshSettings().catch(error=>settingsStatus.textContent=error.message);refreshSimulation().catch(error=>simulationStatus.textContent=error.message);refreshFiles();setInterval(refresh,3000);setInterval(refreshFiles,5000);
 </script></body></html>`);
 }
 
@@ -722,14 +759,32 @@ const server = http.createServer(async (req, res) => {
     ['/api/logs/comments/clear', '/api/logs/interactions/clear'].includes(url.pathname);
   const settingsRoute = url.pathname === '/api/settings' &&
     ['GET', 'POST'].includes(req.method);
-  const adminRoute = settingsRoute ||
+  const simulationRoute = url.pathname === '/api/simulation' &&
+    ['GET', 'POST'].includes(req.method);
+  const adminRoute = settingsRoute || simulationRoute ||
     (req.method === 'GET' && url.pathname === '/api/status') ||
-    (req.method === 'POST' && ['/api/connect', '/api/disconnect', '/api/test-events'].includes(url.pathname)) ||
+    (req.method === 'POST' && ['/api/connect', '/api/disconnect', '/api/test-avatar', '/api/test-events'].includes(url.pathname)) ||
     logReadRoute || logClearRoute;
   if (adminRoute && !requireAdmin(req, res)) return;
 
   if (req.method === 'GET' && url.pathname === '/api/settings') {
     return json(res, 200, { loginEnabled: authSettings.loginEnabled });
+  }
+  if (req.method === 'GET' && url.pathname === '/api/simulation') {
+    return json(res, 200, { enabled: simulationTimer !== null, eventsPerMinute: 100 });
+  }
+  if (req.method === 'POST' && url.pathname === '/api/simulation') {
+    let payload;
+    try {
+      payload = await readJson(req);
+    } catch (error) {
+      return json(res, 400, { error: error.message });
+    }
+    if (!payload || typeof payload.enabled !== 'boolean') {
+      return json(res, 400, { error: 'Indica si la simulación debe activarse o detenerse.' });
+    }
+    const enabled = setSimulationEnabled(payload.enabled);
+    return json(res, 200, { ok: true, enabled, eventsPerMinute: 100 });
   }
   if (req.method === 'POST' && url.pathname === '/api/settings') {
     let payload;
@@ -828,14 +883,7 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { ok: true });
   }
   if (req.method === 'POST' && url.pathname === '/api/test-events') {
-    const avatar = 'data:image/svg+xml;base64,' + Buffer.from(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="32" fill="#4f9d52"/><circle cx="32" cy="24" r="12" fill="#fff"/><path d="M10 62c2-15 10-23 22-23s20 8 22 23" fill="#fff"/></svg>',
-    ).toString('base64');
-    const user = {
-      uniqueId: 'test_tortuga',
-      nickname: 'Prueba',
-      profilePictureUrl: avatar,
-    };
+    const user = testUser();
     const events = [
       ['chat', chatPayload({ ...user, content: 'Colombia' })],
       ['like', { ...user, likeCount: 3 }],
@@ -847,6 +895,11 @@ const server = http.createServer(async (req, res) => {
       setTimeout(() => broadcast(event, data), index * 700);
     });
     return json(res, 200, { ok: true, sent: 5, events: events.map(([event]) => event) });
+  }
+  if (req.method === 'POST' && url.pathname === '/api/test-avatar') {
+    const user = testUser();
+    broadcast('chat', chatPayload({ ...user, content: 'Colombia' }));
+    return json(res, 200, { ok: true, sent: 1, event: 'chat' });
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
