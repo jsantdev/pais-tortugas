@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f9d52">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>Carrera de tortugas – Overlay</title>
+<style>
+  :root{--sand:#ecd49a;--sand2:#e3c78a;--ink:#2b3a1f;--leaf:#4f9d52;--panel:#dff3e4;--gut:122px;--lane:160px;--safe-t:0px;--safe-b:270px;--safe-l:12px;--safe-r:56px}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:transparent;font-family:"Trebuchet MS","Segoe UI",sans-serif;overflow:hidden}
+  /* LIENZO VERTICAL 9:16 (720×1280, se escala a 1080×1920 o a lo que sea). Zonas seguras = espacio que tapa la interfaz de TikTok Live: arriba (perfil/espectadores), abajo (chat/regalos) y derecha (botones). Ajustables en :root o con ?safe=0 */
+  #app{display:flex;flex-direction:column;width:720px;min-height:1280px;padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px 12px;justify-content:center;background:var(--panel);border:3px solid var(--leaf);border-radius:16px;padding:8px 10px;margin-bottom:10px}
+  .chips small{width:100%;text-align:center;font-weight:700;font-size:12px;color:var(--ink)}
+  .chip{display:flex;align-items:center;gap:5px;font-weight:800;font-size:13px;color:var(--ink)}
+  .chip svg{width:26px;height:18px;border-radius:3px;border:1px solid var(--ink)}
+  .track{position:relative;display:flex;flex-direction:column;flex:1 1 auto;justify-content:flex-start;background:transparent;overflow:visible}
+  #lanes{display:flex;flex-direction:column;gap:8px}
+  .lane{position:relative;flex:none;height:var(--lane);border:4px solid var(--edge,var(--leaf));border-radius:14px;overflow:visible}
+  .lane{background-color:var(--l1,var(--sand));background-image:var(--pat,none);background-size:var(--psz,auto)}
+  .lane:nth-child(even){background-color:var(--l2,var(--sand2))}
+  .lane::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--gut);background:var(--gt,#0001)}
+  .label{position:absolute;left:4px;top:0;bottom:0;width:114px;display:flex;align-items:center;gap:4px;z-index:3;color:var(--ink2,var(--ink))}
+  .label svg{width:22px;height:15px;border:1px solid var(--ink2,var(--ink));border-radius:3px;flex:none}
+  .label b{display:block;font-size:17px;line-height:1.1;max-width:114px;color:#fff;background:#000d;padding:5px 8px;border-radius:10px;text-shadow:0 1px 0 #000}
+  .lane-num{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:4px;border-radius:50%;background:#fff;color:var(--ink);font-size:12px;line-height:1;font-weight:900;vertical-align:1px;text-shadow:none}
+  .label small{display:inline-block;margin-top:2px;font-size:10px;font-weight:800;color:#fff;background:#000a;padding:0 6px;border-radius:8px}
+  .guide::after,.start::after,.finish::after{position:absolute;top:2px;font-size:9px;font-weight:800;color:var(--ink2,#0008);white-space:nowrap}
+  .guide::after{content:attr(data-m);left:3px}
+  .start::after{content:"0 m";left:4px}
+  .finish::after{content:"100 m";right:14px}
+  .bar{order:-1;flex:none;margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:3px solid var(--leaf);border-radius:14px;padding:6px 8px 6px 14px;font-weight:800;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .bar .low{color:#b25e00}
+  .bar #gifts{margin-left:auto;background:#fff1c2;border:2px solid #b8860b;color:#5a4100;border-radius:12px;padding:1px 12px;font-size:17px;font-weight:900}
+  .bar #gifts.bump{animation:bump .45s ease-out}
+  @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+  #dot{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px var(--ink),0 0 8px var(--dc,#8a8f87);background:var(--dc,#8a8f87)}
+  #dot.ok{--dc:#22c55e}
+  #dot.wait{--dc:#facc15;animation:dotp 1s ease-in-out infinite}
+  #dot.fail{--dc:#ef4444}
+  #liveuser{max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:800;color:var(--ink)}
+  @keyframes dotp{50%{opacity:.35}}
+  @media (prefers-reduced-motion:reduce){#dot.wait{animation:none}}
+  .bar button{flex:none;border:0;background:var(--leaf);color:#fff;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+  .bar button svg{width:18px;height:18px}
+  .bar button#snd{font-size:16px;line-height:1}
+  .bar button#snd[aria-pressed="false"]{background:#8a8f87}
+  .bar button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+  .comment-lane{order:-1;flex:none;min-height:212px;margin:0 0 8px;padding:6px 10px;border:3px solid var(--leaf);border-radius:14px;background:var(--panel);color:var(--ink)}
+  .comment-title{display:block;margin-bottom:6px;font-size:13px;font-weight:900}
+  #commentFeed{display:grid;gap:5px}
+  .comment-entry{display:flex;align-items:center;gap:12px;min-height:72px;padding:8px 10px;border-radius:9px;background:#fff}
+  .comment-entry .av{width:56px;height:56px}
+  .comment-copy{display:grid;gap:2px;min-width:0}
+  .comment-name{font-size:18px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .comment-text{font-size:19px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+  #countryDirectory{display:none}
+  html.countryDirectory,html.countryDirectory body{overflow:auto;background:#edf7ef}
+  html.countryDirectory #app,html.countryDirectory #status,html.countryDirectory #tp{display:none}
+  html.countryDirectory #countryDirectory{display:block;width:min(900px,calc(100% - 24px));margin:16px auto;padding:18px;border:2px solid var(--leaf);border-radius:14px;background:#fff;color:var(--ink);font-family:system-ui,sans-serif}
+  #countryDirectory h1{margin:0 0 12px;font-size:22px}
+  #countryGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+  .country-card{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid #c5d8c6;border-radius:8px;font-size:14px;font-weight:800}
+  .country-card svg{flex:none;width:36px;height:26px;border:1px solid #65745f;border-radius:3px}
+  #backToBackend{margin-bottom:14px;padding:8px 12px;border:0;border-radius:7px;background:var(--leaf);color:white;font-weight:800;cursor:pointer}
+  .guide{position:absolute;top:0;bottom:0;border-left:2px dashed var(--gl,#0004);pointer-events:none}
+  .start{position:absolute;top:0;bottom:0;left:var(--gut);border-left:3px solid #fff;pointer-events:none;z-index:1}
+  .finish{position:absolute;top:0;bottom:0;right:0;width:12px;z-index:1;background:repeating-conic-gradient(#111 0 25%,#fff 0 50%) 0 0/12px 12px}
+  .turtle{position:absolute;left:var(--gut);top:calc(var(--lane) - 147px - 3px);width:205px;height:147px;will-change:transform;z-index:2}
+  .turtle>svg{width:100%;height:100%;overflow:visible}
+  .crown{position:absolute;right:2px;top:-2px;font-size:15px;opacity:0;transition:opacity .3s;filter:drop-shadow(0 1px 0 #0006)}
+  .leader .crown{opacity:1}
+  .crew{position:absolute;left:0;top:-27px;height:88px;display:flex;align-items:center;z-index:3}
+  .av{position:relative;flex:none;width:88px;height:88px;margin-left:0;border-radius:50%;border:3px solid #fff;overflow:hidden;
+    display:inline-flex;align-items:center;justify-content:center;background:hsl(var(--h) 55% 42%);box-shadow:0 1px 3px #0006}
+  .crew .avw{position:relative;display:inline-flex;margin-left:-26px}
+  .crew .avw:first-child{margin-left:0}
+  .ev{position:absolute;bottom:-10px;left:50%;margin-left:-18px;width:36px;height:36px;border-radius:50%;background:#fff;border:3px solid var(--ink);display:grid;place-items:center;font-size:20px;line-height:1;font-style:normal;z-index:2}
+  .ev.follow{background:#e6ffe6}.ev.share{background:#e8e3ff}
+  .ev.chat{background:#e3f2ff}.ev.like{background:#ffe3ea}.ev.gift{background:#fff1c2}
+  .av i{font-style:normal;color:#fff;font-weight:800;font-size:35px}
+  .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .avw.pop{animation:pop .5s cubic-bezier(.3,1.7,.5,1)}
+  .av.big{width:56px;height:56px;margin:0;border-width:3px}.av.big i{font-size:24px}
+  .more{margin-left:4px;font-size:13px;font-weight:800;color:var(--ink);background:#fffc;border-radius:11px;padding:2px 7px}
+  .nick{margin-left:7px;background:#000d;color:#fff;font-weight:800;font-size:17px;padding:5px 12px;border-radius:10px;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;animation:nick 2s forwards}
+  .chatbubble{position:absolute;left:0;bottom:calc(100% + 8px);z-index:6;display:flex;align-items:center;gap:8px;max-width:560px;padding:6px 12px;border:1px solid #fff9;border-radius:12px;background:#10151fee;color:#fff;font-size:14px;line-height:1.2;white-space:nowrap;overflow:hidden;box-shadow:0 2px 8px #0006;pointer-events:none;animation:chatpop 8s forwards}
+  .chatbubble span{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:24px;font-weight:900;line-height:1.2;white-space:nowrap}
+  @keyframes chatpop{0%,80%{opacity:1}100%{opacity:0}}
+  .gain{position:absolute;left:26px;top:44px;z-index:6;pointer-events:none;font-weight:900;font-size:14px;color:#fff;background:#000d;padding:2px 8px;border-radius:10px;white-space:nowrap;animation:gain 1.1s ease-out forwards}
+  .gain.turbo{font-size:18px;background:linear-gradient(90deg,#ff6a00,#ffb000);color:#2b1400;box-shadow:0 0 14px #ff8a00;animation:gainT 1.7s ease-out forwards}
+  @keyframes gainT{0%{opacity:0;transform:translateY(10px) scale(.5)}15%{opacity:1;transform:scale(1.25)}30%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-22px)}}
+  .turtle.turbo>svg{filter:drop-shadow(0 0 6px #ffb000) drop-shadow(0 0 14px #ff5a00)}
+  .turtle.turbo::before{content:"🔥💨";position:absolute;right:100%;margin-right:-16px;top:34px;font-size:30px;z-index:-1;white-space:nowrap;animation:flick .16s infinite alternate}
+  @keyframes flick{from{transform:translateX(0) scale(1)}to{transform:translateX(-6px) scale(1.15)}}
+  @keyframes gain{0%{opacity:0;transform:translateY(8px) scale(.6)}18%{opacity:1;transform:translateY(0) scale(1.15)}35%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-18px)}}
+  @keyframes pop{0%{transform:scale(.3) translateY(10px)}100%{transform:none}}
+  @keyframes nick{0%{opacity:0;transform:translateX(-8px)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+  .pct{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-weight:800;font-size:13px;color:#fff;background:#000a;padding:1px 8px;border-radius:9px;z-index:3}
+  .pct:empty{display:none}
+  #winner{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:6px;z-index:5;background:#2b3a1fe6;color:#fff;text-align:center;font-weight:800}
+  #winner.show{display:flex}
+  #winner b{font-size:32px}
+  #winner>span{font-size:14px;opacity:.9}
+  .wf svg{width:64px;height:44px;border:2px solid #fff;border-radius:6px}
+  .mvps{display:flex;gap:16px;margin-top:6px}
+  .mvp{display:flex;flex-direction:column;align-items:center;width:84px}
+  .mvp em{font-style:normal;font-size:12px;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mvp small{font-size:11px;opacity:.8}
+  #status{z-index:60;position:fixed;bottom:4px;left:6px;font-size:11px;color:#fff;background:#0008;padding:2px 6px;border-radius:6px;display:none}
+  .sname{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:4;background:#000b;color:#fff;font-weight:800;font-size:12px;padding:3px 12px;border-radius:12px;opacity:0;pointer-events:none;white-space:nowrap}
+  .sname.show{animation:sn 3.2s forwards}
+  @keyframes sn{0%{opacity:0;transform:translate(-50%,-6px)}10%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0}}
+  .emote{position:absolute;right:-6px;top:-8px;font-size:16px;opacity:0;z-index:4;pointer-events:none}
+  .emote.pop{animation:emo 1.8s forwards}
+  .emote.loop{animation:zz 2.4s infinite}
+  @keyframes emo{0%{opacity:0;transform:translateY(6px) scale(.4)}15%{opacity:1;transform:scale(1.25)}28%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+  @keyframes zz{0%,100%{opacity:.9;transform:translateY(0)}50%{opacity:.35;transform:translateY(-8px)}}
+  @media (prefers-reduced-motion:reduce){.turtle.turbo::before,.gain.turbo{animation:none}.bar #gifts.bump{animation:none}.gain{animation:none}.avw.pop,.nick,.emote.pop,.emote.loop{animation:none}.emote.pop,.emote.loop{opacity:1}}
+  #tp{position:fixed;right:8px;top:8px;width:216px;z-index:50;display:none;background:#10151cee;color:#fff;border-radius:12px;padding:10px;font:700 12px "Trebuchet MS","Segoe UI",sans-serif;box-shadow:0 4px 16px #0008}
+  #tp.on{display:block}
+  #tp h4{margin:0 0 8px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+  #tp h4 span{font-weight:600;opacity:.6}
+  #tp .g{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  #tp button{border:0;border-radius:8px;padding:8px 4px;background:#243040;color:#fff;font:inherit;cursor:pointer;text-align:center}
+  #tp button:hover{background:#34465e}
+  #tp button:active{transform:scale(.96)}
+  #tp button:focus-visible{outline:2px solid #6ec1ff;outline-offset:1px}
+  #tp .wide{grid-column:1/-1}
+  #tp .win{background:#2f7d3a}#tp .win:hover{background:#3a9748}
+  #tp .nx{background:#5a3f93}#tp .nx:hover{background:#6e4db3}
+  @media (prefers-reduced-motion:reduce){#tp button:active{transform:none}}
+  .fxl{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden;border-radius:14px}
+  .toasts{position:absolute;top:8px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .toast{background:#000d;color:#fff;font-weight:900;font-size:20px;padding:6px 16px;border-radius:14px;border:2px solid #ffd75e;box-shadow:0 0 14px #ffb00088;max-width:94%;text-align:center;animation:tin .3s cubic-bezier(.3,1.7,.5,1),tout .4s 2.8s forwards}
+  .toast.gift{background:linear-gradient(90deg,#ff6a00,#ffb000);color:#2b1400;border-color:#fff}
+  @keyframes tin{from{opacity:0;transform:scale(.5) translateY(-10px)}}
+  @keyframes tout{to{opacity:0}}
+  .cf{position:absolute;top:0;font-style:normal;will-change:transform}
+  .podium{display:flex;gap:16px;margin:4px 0}
+  .pod{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px}
+  .pod>span{font-size:22px}.pod svg{width:44px;height:30px;border:2px solid #fff;border-radius:5px}.pod small{opacity:.8;font-size:11px}
+  .bar #gifts{transition:background .4s}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="track" id="track">
+    <div id="lanes"></div>
+    <div id="winner"></div>
+    <div class="sname" id="stylename"></div>
+    <div class="fxl" id="fxl"><div class="toasts" id="toasts"></div></div>
+  </div>
+  <div class="bar" id="bar">
+    <span id="dot" class="off" role="status" aria-label="Sin backend" title="Sin backend"></span>
+    <span id="liveuser" aria-label="Usuario conectado"></span>
+    <span id="clock">⏱ 00:00:00</span>
+    <span id="rate">⚡ 0 ev/min</span>
+    <span id="gifts" title="Regalos recibidos">🎁 0</span>
+    <button id="snd" type="button" title="Sonido (M)" aria-label="Activar o silenciar sonido" aria-pressed="true">🔊</button>
+    <button id="reload" type="button" title="Recargar página" aria-label="Recargar página"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></svg></button>
+    <button id="cfg" type="button" title="Configurar usuario de TikTok (backend)" aria-label="Abrir configuración del backend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+  <div class="comment-lane" aria-live="polite" aria-label="Últimos tres comentarios del chat">
+    <strong class="comment-title">💬 Últimos 3 comentarios</strong>
+    <div id="commentFeed"></div>
+  </div>
+</div>
+<div id="status"></div>
+<main id="countryDirectory"><h1>🌍 Países y banderas</h1><button id="backToBackend" type="button">Volver a administración</button><div id="countryGrid"></div></main>
+<div id="tp" role="group" aria-label="Pruebas de eventos">
+  <h4>Pruebas de eventos <span>T = ocultar/mostrar</span></h4>
+  <div class="g">
+    <button type="button" data-ev="chat">💬 Comentario</button>
+    <button type="button" data-ev="like">❤️ Like ×3</button>
+    <button type="button" data-ev="follow">➕ Seguir</button>
+    <button type="button" data-ev="share">↗️ Compartir</button>
+    <button type="button" data-ev="gift">🎁 Regalo</button>
+    <button type="button" data-ev="burst">🎲 Ráfaga ×20</button>
+    <button type="button" class="win wide" data-ev="win">🏆 Ganar (el líder)</button>
+    <button type="button" class="nx wide" data-ev="next">⏭ Reiniciar · siguiente pista</button>
+  </div>
+</div>
+
+<script>
+/* ============ CONFIGURACIÓN ============ */
+const CONFIG = {
+  GOAL: 100,           // metros de la pista (1 punto = 1 metro)
+  SOUND: true,         // efectos de sonido (también: ?mute=1 para silenciar, tecla M para alternar)
+  VOLUME: 0.5,         // 0 a 1
+  /* METROS QUE AVANZA LA TORTUGA SEGÚN EL TIPO DE EVENTO (1 m = 1 % de la pista, con GOAL 100) */
+  POINTS: {
+    chat:   1,         // comentario que nombra un país
+    like:   1,         // por cada bloque de LIKES_PER_STEP likes del mismo espectador
+    follow: 3,         // seguir
+    share:  5,         // compartir
+    gift:   25         // regalo: 25 m = 25 % de la pista, con modo TURBO
+  },
+  STYLE_ROTATE: 'order', // los 30 estilos de pista: 'order' (en fila) o 'random'. Fija uno con ?style=7
+  CREW_TTL: 15,        // segundos que un avatar se queda sobre su pista tras su último evento
+  LOW_RATE: 5,         // si hay menos de 5 eventos/min, las tortugas avanzan solas
+  AUTO_MIN: 1, AUTO_MAX: 2,        // metros que avanza sola (una tortuga a la vez, al azar)
+  AUTO_EVERY: [3000, 6000],        // cada cuántos ms (entre un valor y otro)
+  GIFT_PER_UNIT: false,// false = cada evento de regalo da POINTS.gift completo; true = se multiplica por repeatCount
+  TURBO_S: 2.8,        // segundos que dura el modo turbo (los regalos grandes usan GIFT_TIERS)
+  /* REGALOS GAMIFICADOS: según la cantidad (repeatCount) el regalo es más potente */
+  GIFT_TIERS: [
+    {min:1,  name:'TURBO',       icon:'🚀', mult:1,   turbo:2.8, sfx:'turbo',  confetti:20},
+    {min:5,  name:'SÚPER TURBO', icon:'⚡', mult:1.5, turbo:4,   sfx:'turbo2', confetti:45},
+    {min:10, name:'MEGA REGALO', icon:'💎', mult:2,   turbo:6,   sfx:'mega',   confetti:90}
+  ],
+  GIFT_LEVEL_EVERY: 10, // cada 10 regalos sube el NIVEL de regalos de la barra
+  RESET_MS: 6500,      // ms que se muestra el podio del ganador antes de reiniciar
+  MATCH: 0.7,          // similitud mínima (70%) entre una palabra del comentario y el país
+  RANDOM_ASSIGN: true, // quien da likes/regalos sin escribir país recibe uno al azar
+  LIKES_PER_STEP: 3,   // cada 3 taps (likes) de un espectador = avanza su tortuga
+  WS_URL: new URLSearchParams(location.search).get('ws') || ((location.protocol==='http:' || location.protocol==='https:') ? (location.protocol==='https:' ? 'wss://' : 'ws://') + location.host : ''), // mismo servidor si no se especifica ?ws=
+  CFG_URL: new URLSearchParams(location.search).get('cfg') || '', // página de configuración del backend (si falta, se deduce de ws; ej: ?cfg=http://localhost:21213/)
+  TIKTOK_USER: (new URLSearchParams(location.search).get('user') || 'tortulive').replace(/^@/,'').trim().toLowerCase(), // usuario de TikTok al que conecta por defecto (se cambia con ?user=otro). El backend recibe este valor en el evento 'connect'
+  RETRY_MS: 3000,      // reintenta la conexión con el backend cada 3 s…
+  RETRY_MAX_MS: 300000 // …durante 5 min como máximo; luego se detiene (el ⚙ o un clic en el aviso reintenta)
+};
+{ const lu = document.getElementById('liveuser'); lu.textContent = '@' + CONFIG.TIKTOK_USER; lu.title = 'Usuario TikTok: @' + CONFIG.TIKTOK_USER; }
+
+/* País: nombre visible, alias que se detectan en el chat, y bandera (dibujada dentro del caparazón) */
+const BASE = [
+  {id:'co', name:'Colombia', alias:['colombia','🇨🇴'],
+   flag:`<rect x="20" y="14" width="80" height="29" fill="#fcd116"/><rect x="20" y="43" width="80" height="14.5" fill="#003893"/><rect x="20" y="57.5" width="80" height="14.5" fill="#ce1126"/>`},
+  {id:'br', name:'Brasil', alias:['brasil','brazil','🇧🇷'],
+   flag:`<rect x="20" y="14" width="80" height="58" fill="#1a9b3c"/><polygon points="60,20 94,43 60,66 26,43" fill="#ffd400"/><circle cx="60" cy="43" r="12" fill="#1b3f94"/>`},
+  {id:'ar', name:'Argentina', alias:['argentina','arg','🇦🇷'],
+   flag:`<rect x="20" y="14" width="80" height="58" fill="#74acdf"/><rect x="20" y="33" width="80" height="20" fill="#fff"/><circle cx="60" cy="43" r="6" fill="#f6b40e"/>`},
+  {id:'py', name:'Paraguay', alias:['paraguay','par','🇵🇾'],
+   flag:`<rect x="20" y="14" width="80" height="20" fill="#d52b1e"/><rect x="20" y="33" width="80" height="20" fill="#fff"/><rect x="20" y="52" width="80" height="20" fill="#0038a8"/><circle cx="60" cy="43" r="6" fill="none" stroke="#2b3a1f" stroke-width="2"/>`},
+  {id:'uy', name:'Uruguay', alias:['uruguay','uru','🇺🇾'],
+   flag:`<rect x="20" y="14" width="80" height="58" fill="#fff"/><rect x="20" y="24" width="80" height="6" fill="#0038a8"/><rect x="20" y="36" width="80" height="6" fill="#0038a8"/><rect x="20" y="48" width="80" height="6" fill="#0038a8"/><rect x="20" y="60" width="80" height="6" fill="#0038a8"/><rect x="20" y="14" width="34" height="28" fill="#fff"/><circle cx="37" cy="28" r="8" fill="#f6b40e"/>`},
+  {id:'sn', name:'Senegal', alias:['senegal','sen','🇸🇳'],
+   flag:`<rect x="20" y="14" width="27" height="58" fill="#00853f"/><rect x="47" y="14" width="26" height="58" fill="#fdef42"/><rect x="73" y="14" width="27" height="58" fill="#e31b23"/><polygon points="60,33 63,41 71,41 65,46 67,54 60,49 53,54 55,46 49,41 57,41" fill="#00853f"/>`}
+];
+
+
+/* ===== Países que pueden entrar a la carrera al ser mencionados en el chat ===== */
+const H=(cs)=>cs.map((c,i)=>`<rect x="20" y="${14+i*58/cs.length}" width="80" height="${58/cs.length+.5}" fill="${c}"/>`).join('');
+const V=(cs)=>cs.map((c,i)=>`<rect x="${20+i*80/cs.length}" y="14" width="${80/cs.length+.5}" height="58" fill="${c}"/>`).join('');
+const W='<rect x="20" y="14" width="80" height="58" fill="#fff"/>';
+const R=(f)=>`<rect x="20" y="14" width="80" height="58" fill="${f}"/>`;
+const zig=(x,f)=>`<polygon points="20,14 ${x},14 ${x-8},21 ${x},28 ${x-8},35 ${x},43 ${x-8},50 ${x},57 ${x-8},64 ${x},72 20,72" fill="${f}"/>`;
+const POOL = [
+ {id:'us',name:'Estados Unidos',alias:['usa','eeuu','america','estadosunidos','🇺🇸'],flag:H(['#b22234','#fff','#b22234','#fff','#b22234','#fff','#b22234'])+'<rect x="20" y="14" width="36" height="31" fill="#3c3b6e"/><path d="M24 22H52M24 29H52M24 36H52" stroke="#fff" stroke-width="2.5" stroke-dasharray="1.8 4.5"/>'},
+ {id:'sa',name:'Arabia Saudita',alias:['arabia','saudita','saudi','🇸🇦'],flag:R('#006c35')+'<rect x="36" y="30" width="48" height="6" rx="3" fill="#fff"/><rect x="38" y="52" width="44" height="3" fill="#fff"/>'},
+ {id:'ae',name:'Emiratos',alias:['emiratos','uae','dubai','🇦🇪'],flag:W+'<rect x="38" y="14" width="62" height="19.4" fill="#00732f"/><rect x="38" y="52.6" width="62" height="19.4" fill="#000"/><rect x="20" y="14" width="18" height="58" fill="#f00"/>'},
+ {id:'gb',name:'Reino Unido',alias:['reinounido','uk','inglaterra','england','🇬🇧'],flag:R('#012169')+'<path d="M20 14L100 72M100 14L20 72" stroke="#fff" stroke-width="8"/><path d="M20 14L100 72M100 14L20 72" stroke="#c8102e" stroke-width="3"/><path d="M60 14V72M20 43H100" stroke="#fff" stroke-width="14"/><path d="M60 14V72M20 43H100" stroke="#c8102e" stroke-width="8"/>'},
+ {id:'ca',name:'Canadá',alias:['canada','canadá','🇨🇦'],flag:W+'<rect x="20" y="14" width="20" height="58" fill="#d52b1e"/><rect x="80" y="14" width="20" height="58" fill="#d52b1e"/><polygon points="60,24 64,35 72,32 68,45 74,46 62,56 62,64 58,64 58,56 46,46 52,45 48,32 56,35" fill="#d52b1e"/>'},
+ {id:'de',name:'Alemania',alias:['alemania','germany','🇩🇪'],flag:H(['#000','#d00','#ffce00'])},
+ {id:'fr',name:'Francia',alias:['francia','france','🇫🇷'],flag:V(['#0055a4','#fff','#ef4135'])},
+ {id:'jp',name:'Japón',alias:['japon','japón','japan','🇯🇵'],flag:W+'<circle cx="60" cy="43" r="17" fill="#bc002d"/>'},
+ {id:'kr',name:'Corea del Sur',alias:['corea','korea','🇰🇷'],flag:W+'<circle cx="60" cy="43" r="14" fill="#cd2e3a"/><path d="M46 43a14 14 0 0 0 28 0a7 7 0 0 0-14 0a7 7 0 0 1-14 0z" fill="#0047a0"/><path d="M28 22l8 6M92 22l-8 6M28 64l8-6M92 64l-8-6" stroke="#000" stroke-width="3"/>'},
+ {id:'kw',name:'Kuwait',alias:['kuwait','kuait','🇰🇼'],flag:H(['#007a3d','#fff','#ce1126'])+'<polygon points="20,14 42,29 42,57 20,72" fill="#000"/>'},
+ {id:'qa',name:'Catar',alias:['catar','qatar','🇶🇦'],flag:R('#8a1538')+zig(44,'#fff')},
+ {id:'au',name:'Australia',alias:['australia','🇦🇺'],flag:R('#012169')+'<path d="M20 14L50 34M50 14L20 34" stroke="#fff" stroke-width="4"/><path d="M35 14V34M20 24H50" stroke="#fff" stroke-width="7"/><path d="M35 14V34M20 24H50" stroke="#c8102e" stroke-width="4"/><g fill="#fff"><circle cx="35" cy="58" r="4"/><circle cx="78" cy="30" r="3"/><circle cx="88" cy="46" r="3"/><circle cx="78" cy="62" r="3"/><circle cx="68" cy="46" r="3"/></g>'},
+ {id:'it',name:'Italia',alias:['italia','italy','🇮🇹'],flag:V(['#009246','#fff','#ce2b37'])},
+ {id:'es',name:'España',alias:['españa','espana','spain','🇪🇸'],flag:R('#aa151b')+'<rect x="20" y="28.5" width="80" height="29" fill="#f1bf00"/>'},
+ {id:'nl',name:'Países Bajos',alias:['holanda','paisesbajos','netherlands','🇳🇱'],flag:H(['#ae1c28','#fff','#21468b'])},
+ {id:'mx',name:'México',alias:['mexico','méxico','🇲🇽'],flag:V(['#006847','#fff','#ce1126'])+'<circle cx="60" cy="43" r="7" fill="#8c6a2f"/>'},
+ {id:'tr',name:'Turquía',alias:['turquia','turquía','turkey','🇹🇷'],flag:R('#e30a17')+'<circle cx="54" cy="43" r="16" fill="#fff"/><circle cx="59" cy="43" r="13" fill="#e30a17"/><circle cx="73" cy="43" r="5" fill="#fff"/>'},
+ {id:'ch',name:'Suiza',alias:['suiza','switzerland','🇨🇭'],flag:R('#d52b1e')+'<rect x="54" y="26" width="12" height="34" fill="#fff"/><rect x="45" y="37" width="30" height="12" fill="#fff"/>'},
+ {id:'iq',name:'Irak',alias:['irak','iraq','🇮🇶'],flag:H(['#ce1126','#fff','#000'])+'<rect x="44" y="40" width="32" height="5" fill="#007a3d"/>'},
+ {id:'bh',name:'Baréin',alias:['bahrein','baréin','bahrain','🇧🇭'],flag:R('#ce1126')+zig(48,'#fff')}
+];
+const MAX_LANES = 5, STARTING_LANES = 3;
+const ALL_BASE = [...BASE, ...POOL];
+/* Catálogo completo (ONU + Palestina, Taiwán, Kosovo, Vaticano). Banderas simplificadas con un mini-lenguaje:
+   H/V = franjas horizontales/verticales, R = color liso (letras = colores)  |  overlays: T/t triángulo, C/c círculo, Z círculo al asta,
+   S/s/u estrella, N/n cruz nórdica, P cruz centrada, D aspa, K cantón, M rombo.  Cada país también responde a su emoji de bandera. */
+const PL={r:'#ce1126',w:'#fff',b:'#0038a8',g:'#009a44',y:'#fcd116',k:'#111',o:'#ff8200',l:'#6cb4ee',n:'#002868',m:'#8a1538'};
+const star=(x,y,r,f)=>`<polygon fill="${f}" points="${[...Array(10)].map((_,i)=>{const a=-Math.PI/2+i*Math.PI/5,q=i%2?r*.4:r;return (x+q*Math.cos(a)).toFixed(1)+','+(y+q*Math.sin(a)).toFixed(1)}).join(' ')}"/>`;
+const OV={
+ T:f=>`<polygon points="20,14 60,43 20,72" fill="${f}"/>`, t:f=>`<polygon points="20,14 46,43 20,72" fill="${f}"/>`,
+ C:f=>`<circle cx="60" cy="43" r="16" fill="${f}"/>`, c:f=>`<circle cx="60" cy="43" r="9" fill="${f}"/>`, Z:f=>`<circle cx="54" cy="43" r="17" fill="${f}"/>`,
+ S:f=>star(60,43,15,f), s:f=>star(36,29,9,f), u:f=>star(34,43,9,f),
+ N:f=>`<path d="M40 14V72M20 43H100" stroke="${f}" stroke-width="12"/>`, n:f=>`<path d="M40 14V72M20 43H100" stroke="${f}" stroke-width="6"/>`,
+ P:f=>`<path d="M60 14V72M20 43H100" stroke="${f}" stroke-width="10"/>`, D:f=>`<path d="M20 14L100 72M100 14L20 72" stroke="${f}" stroke-width="8"/>`,
+ K:f=>`<rect x="20" y="14" width="36" height="31" fill="${f}"/>`, M:f=>`<polygon points="60,20 92,43 60,66 28,43" fill="${f}"/>`
+};
+const mkFlag=s=>{const [b,...o]=s.split('|'),t=b[0],cs=[...b.slice(1)].map(c=>PL[c]);
+  return (t==='H'?H(cs):t==='V'?V(cs):R(cs[0]))+o.map(x=>OV[x[0]](PL[x[1]])).join('')};
+const EXTRA=`
+ag|Antigua y Barbuda|antigua|Rr|Mk|Sy
+bs|Bahamas||Hlyl|Tk
+bb|Barbados||Vnyn|ck
+bz|Belice|belize|Hrnr|Cw
+bo|Bolivia||Hryg
+cl|Chile||Hwr|Kn|sw
+cr|Costa Rica|costarica|Hnwrwn
+cu|Cuba||Hbwbwb|Tr|uw
+dm|Dominica||Rg|Pk|Cr
+do|República Dominicana|dominicana dominicano|Hbr|Pw
+ec|Ecuador||Hyybr
+sv|El Salvador|salvador|Hnwn
+gd|Granada|grenada|Rr|Mg|Sy
+gt|Guatemala||Vlwl
+gy|Guyana||Rg|Tw|tr
+ht|Haití|haiti|Hnr
+hn|Honduras||Hbwb|cb
+jm|Jamaica||Rg|Dy
+ni|Nicaragua||Hbwb|cy
+pa|Panamá|panama|Hwr|sb
+pe|Perú|peru|Vrwr
+kn|San Cristóbal y Nieves|sancristobal|Hgr|Dk
+lc|Santa Lucía|santalucia|Rl|Mw|ck
+vc|San Vicente y las Granadinas|sanvicente|Vbyg
+sr|Surinam|suriname|Hgwrwg|Sy
+tt|Trinidad y Tobago|trinidad tobago|Rr|Dk
+ve|Venezuela||Hybr
+al|Albania||Rr|ck
+ad|Andorra||Vbyr
+am|Armenia||Hrbo
+at|Austria||Hrwr
+az|Azerbaiyán|azerbaijan|Hlrg|cw
+by|Bielorrusia|belarus|Hrg|tw
+be|Bélgica|belgium|Vkyr
+ba|Bosnia||Rn|ty
+bg|Bulgaria||Hwgr
+hr|Croacia|croatia|Hrwb|cr
+cy|Chipre|cyprus|Rw|cy
+cz|Chequia|checa|Hwr|Tb
+dk|Dinamarca|denmark|Rr|Nw
+ee|Estonia||Hnkw
+fi|Finlandia|finland|Rw|Nb
+ge|Georgia||Rw|Pr
+gr|Grecia|greece|Hbwbwbwbwb|Kb|sw
+hu|Hungría|hungria hungary|Hrwg
+is|Islandia|iceland|Rb|Nw|nr
+ie|Irlanda|ireland|Vgwo
+lv|Letonia|latvia|Hmwm
+li|Liechtenstein||Hbr|cy
+lt|Lituania|lithuania|Hygr
+lu|Luxemburgo|luxembourg|Hrwl
+mt|Malta||Vwr
+md|Moldavia|moldova|Vbyr
+mc|Mónaco|monaco|Hrw
+me|Montenegro||Rr|Cy
+mk|Macedonia del Norte|macedonia|Rr|Cy
+no|Noruega|norway|Rr|Nw|nb
+pl|Polonia|poland|Hwr
+pt|Portugal||Vgrr|cy
+ro|Rumania|romania|Vbyr
+ru|Rusia|russia|Hwbr
+sm|San Marino|sanmarino|Hwl
+rs|Serbia||Hrbw
+sk|Eslovaquia|slovakia|Hwbr
+si|Eslovenia|slovenia|Hwbr
+se|Suecia|sweden|Rb|Ny
+ua|Ucrania|ukraine|Hby
+va|Vaticano|vatican|Vyw
+xk|Kosovo||Rb|Sw
+af|Afganistán|afganistan afghanistan|Vkrg
+bd|Bangladés|bangladesh|Rg|Zr
+bt|Bután|butan bhutan|Hyo
+bn|Brunéi|brunei|Ry|Cr
+kh|Camboya|cambodia|Hbrb|cw
+cn|China||Rr|sy
+in|India||Howg|cb
+id|Indonesia||Hrw
+ir|Irán|iran|Hwgr|cr
+il|Israel||Rw|Sb
+jo|Jordania|jordan|Hkwg|Tr
+kz|Kazajistán|kazajistan kazakhstan|Rl|cy
+kg|Kirguistán|kirguistan kyrgyzstan|Rr|cy
+la|Laos||Hrbr|cw
+lb|Líbano|libano lebanon|Hrwr|cg
+my|Malasia|malaysia|Hrwrwrwrwrwrwr|Kn|sy
+mv|Maldivas|maldives|Rr|Mg
+mn|Mongolia||Vrbr
+mm|Birmania|myanmar|Hygr|Sw
+np|Nepal||Rr|tb
+kp|Corea del Norte|norcorea|Hnrwrn|cw
+om|Omán|oman|Hwrg|Kr
+pk|Pakistán|pakistan|Vwgg|cw
+ph|Filipinas|philippines|Hbr|Tw|sy
+sg|Singapur|singapore|Hrw|sw
+lk|Sri Lanka|srilanka|Ry|Kg
+sy|Siria|syria|Hrwk
+tj|Tayikistán|tayikistan tajikistan|Hrwg
+th|Tailandia|thailand|Hrwbwr
+tl|Timor Oriental|timor|Rr|Ty|tk
+tm|Turkmenistán|turkmenistan|Rg|tr
+uz|Uzbekistán|uzbekistan|Hlwg
+vn|Vietnam||Rr|Sy
+ye|Yemen||Hrwk
+ps|Palestina|palestine|Hkwg|Tr
+tw|Taiwán|taiwan|Rr|Kb|sw
+dz|Argelia|algeria|Vwg|cr
+ao|Angola||Hrk|cy
+bj|Benín|benin|Vgyr
+bw|Botsuana|botswana|Hlwkwl
+bf|Burkina Faso|burkina|Hrg|Sy
+bi|Burundi||Rr|Dw|cg
+cv|Cabo Verde|caboverde|Hnwrwn|cy
+cm|Camerún|camerun cameroon|Vgry|Sy
+cf|República Centroafricana|centroafricana|Hbwgy
+td|Chad||Vnyr
+km|Comoras|comoros|Hywrb|Tg
+cg|Congo||Vgyr
+cd|RD Congo|rdcongo|Rl|Dr|sy
+ci|Costa de Marfil|marfil ivory|Vowg
+dj|Yibuti|djibouti|Hlg|Tw|sr
+eg|Egipto|egypt|Hrwk
+gq|Guinea Ecuatorial|ecuatorial|Hgwr|Tb
+er|Eritrea||Hgb|Tr
+sz|Esuatini|eswatini suazilandia|Hbyryb
+et|Etiopía|etiopia ethiopia|Hgyr|cb
+ga|Gabón|gabon|Hgyb
+gm|Gambia||Hrbg
+gh|Ghana||Hryg|sk
+gn|Guinea||Vryg
+gw|Guinea-Bisáu|bissau|Hyg|Tr|sk
+ke|Kenia|kenya|Hkrg|cr
+ls|Lesoto|lesotho|Hbwg
+lr|Liberia||Hrwrwrwrwrwr|Kb|sw
+ly|Libia|libya|Hrkg|cw
+mg|Madagascar||Hrg|tw
+mw|Malaui|malawi|Hkrg
+ml|Mali||Vgyr
+mr|Mauritania||Hrgr|cy
+mu|Mauricio|mauritius|Hrbyg
+ma|Marruecos|morocco|Rr|sg
+mz|Mozambique||Hgky|Tr
+na|Namibia||Hbrg|sy
+ne|Níger|niger|Howg|co
+ng|Nigeria||Vgwg
+rw|Ruanda|rwanda|Hlyg|Sy
+st|Santo Tomé|santotome|Hgyg|Tr
+sc|Seychelles||Hnyrwg
+sl|Sierra Leona|sierraleona|Hgwb
+so|Somalia||Rl|Sw
+za|Sudáfrica|sudafrica|Hrb|Tg|tk
+ss|Sudán del Sur|sudansur|Hkrg|Tb
+sd|Sudán|sudan|Hrwk|Tg
+tz|Tanzania||Hgb|Dk
+tg|Togo||Hgygy|Kr|sw
+tn|Túnez|tunez tunisia|Rr|Cw|cr
+ug|Uganda||Hkyrkyr
+zm|Zambia||Rg
+zw|Zimbabue|zimbabwe|Hgyrkryg|Tw|sr
+fj|Fiyi|fiji|Rl|Kn|sw
+ki|Kiribati||Hrb
+mh|Islas Marshall|marshall|Rn|sw
+fm|Micronesia||Rl|sw
+nr|Nauru||Hnyn|sw
+nz|Nueva Zelanda|nuevazelanda|Rn|sr
+pw|Palaos|palau|Rl|cy
+pg|Papúa Nueva Guinea|papua|Hrk|sy
+ws|Samoa||Rr|Kb|sw
+sb|Islas Salomón|salomon|Hlg|Dy|sw
+to|Tonga||Rr|Kw
+tv|Tuvalu||Rl|Kn|sy
+vu|Vanuatu||Hrg|Tk
+`.trim().split('\n').map(l=>{const [id,name,al,...sp]=l.split('|');
+  return {id,name,alias:[name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f\s.]/g,''),...al.split(' ').filter(Boolean),
+    String.fromCodePoint(...[...id.toUpperCase()].map(c=>127397+c.charCodeAt(0)))],flag:mkFlag(sp.join('|'))}});
+const ALL_COUNTRIES = [...ALL_BASE, ...EXTRA.filter(e=>!ALL_BASE.some(b=>b.id===e.id))];
+let COUNTRIES = [], forced = null;
+let nextCountries = null;
+let pendingRaceResult = null;
+
+function pickCountries(){
+  const defaults = ['co','br','ar'].map(id=>ALL_COUNTRIES.find(c=>c.id===id));
+  const selected = forced
+    ? forced.map(id=>ALL_COUNTRIES.find(c=>c.id===id)).filter(Boolean)
+    : (nextCountries || defaults);
+  forced = null;
+  nextCountries = null;
+  COUNTRIES = selected.slice(0, STARTING_LANES).map(c=>({...c}));
+  for(const country of defaults){
+    if(COUNTRIES.length >= STARTING_LANES) break;
+    if(!COUNTRIES.some(c=>c.id===country.id)) COUNTRIES.push({...country});
+  }
+}
+/* Fuerza los países que iniciarán la próxima carrera: TurtleRace.setRotating(['sa','ae']) */
+function setRotating(ids){ forced = ids.slice(0, STARTING_LANES); }
+
+/* ============ DIBUJO ============ */
+const eyeSVG = (x,R) => `<g class="eye" data-x="${x}" data-r="${R}">
+    <ellipse class="ew" cx="${x}" cy="35" rx="${R}" ry="${R}" fill="#fff" stroke="#2b3a1f" stroke-width="1.8"/>
+    <ellipse class="ep" cx="${x+R*.3}" cy="35" rx="${R*.45}" ry="${R*.45}" fill="#2b3a1f"/>
+    <path class="ea" d="M${x-R} 36 Q${x} ${36-R*1.7} ${x+R} 36" stroke="#2b3a1f" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="0"/>
+    <path class="eb" d="M${x-R} ${35-R-2.5} L${x+R} ${35-R-2.5}" stroke="#2b3a1f" stroke-width="2" stroke-linecap="round"/></g>`;
+const turtleSVG = (c) => {
+  const leg = (cx,px,f) => `<g class="leg" data-p="${px},58"><ellipse cx="${cx}" cy="70" rx="10" ry="8" fill="${f}" stroke="#2b3a1f" stroke-width="3"/></g>`;
+  return `
+<svg viewBox="0 0 120 86">
+  <defs><clipPath id="cp-${c.id}"><ellipse cx="60" cy="43" rx="40" ry="29"/></clipPath></defs>
+  <ellipse class="shd" cx="60" cy="81" rx="42" ry="5" fill="#0003"/>
+  ${leg(46,46,'#4f8a44')}${leg(96,96,'#4f8a44')}${leg(34,34,'#6bb35a')}${leg(84,84,'#6bb35a')}
+  <g class="tail" data-p="26,52"><path d="M24 46 L6 54 L24 58Z" fill="#6bb35a" stroke="#2b3a1f" stroke-width="3" stroke-linejoin="round"/></g>
+  <g class="head" data-p="92,46">
+    <ellipse cx="96" cy="46" rx="10" ry="7" fill="#6bb35a" stroke="#2b3a1f" stroke-width="3"/>
+    <ellipse cx="106" cy="38" rx="13" ry="12" fill="#6bb35a" stroke="#2b3a1f" stroke-width="3"/>
+    <circle class="bl" cx="97" cy="42" r="3" fill="#ff7b9c" opacity="0"/><circle class="bl" cx="116" cy="43" r="3" fill="#ff7b9c" opacity="0"/>
+    ${eyeSVG(100,3.6)}${eyeSVG(110.5,4.2)}
+    <path class="tr" d="M99 40 q-2.6 4 0 5.4 q2.6 -1.4 0 -5.4z" fill="#6ec1ff" opacity="0"/>
+    <path class="mp" d="M103 45 Q108.5 47 114 45" stroke="#2b3a1f" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <ellipse class="mo" cx="108.5" cy="46" rx="3.6" ry="0" fill="#5b1f1f" opacity="0"/>
+    <g class="sg" opacity="0"><rect x="94.5" y="31" width="10" height="7.5" rx="2.5" fill="#111"/><rect x="105.5" y="30.5" width="11.5" height="8" rx="2.5" fill="#111"/><path d="M104 33.5H105.5" stroke="#111" stroke-width="1.8"/></g>
+  </g>
+  <g class="shell">
+    <g clip-path="url(#cp-${c.id})">${c.flag}
+      <path d="M60 14V72M36 20L60 43L36 66M84 20L60 43L84 66" stroke="#0003" stroke-width="2" fill="none"/>
+      <ellipse cx="48" cy="26" rx="16" ry="6" fill="#fff4" transform="rotate(-15 48 26)"/>
+    </g>
+    <ellipse cx="60" cy="43" rx="40" ry="29" fill="none" stroke="#2b3a1f" stroke-width="4"/>
+  </g>
+</svg>`;
+};
+
+const flagMini = (c) => `<svg viewBox="20 14 80 58" preserveAspectRatio="none">${c.flag}</svg>`;
+
+/* ============ 30 ESTILOS DE PISTA (cambia en cada carrera) ============
+   [nombre, ícono, carril A, carril B, borde, patrón, color del patrón, texto, oscuro(1)/claro(0)] */
+const PAT = {
+  dots:   c=>[`radial-gradient(${c} 1.4px,transparent 1.8px)`,'14px 14px'],
+  stripes:c=>[`repeating-linear-gradient(90deg,${c} 0 6px,transparent 6px 14px)`,'auto'],
+  diag:   c=>[`repeating-linear-gradient(45deg,${c} 0 5px,transparent 5px 12px)`,'auto'],
+  grid:   c=>[`linear-gradient(${c} 1px,transparent 1px),linear-gradient(90deg,${c} 1px,transparent 1px)`,'16px 16px'],
+  checks: c=>[`conic-gradient(${c} 25%,transparent 0 50%,${c} 0 75%,transparent 0)`,'20px 20px'],
+  waves:  c=>[`radial-gradient(circle at 50% 100%,transparent 6px,${c} 7px,${c} 8px,transparent 9px)`,'18px 10px'],
+  stars:  c=>[`radial-gradient(${c} 1px,transparent 1.5px),radial-gradient(${c} .8px,transparent 1.2px)`,'31px 31px,19px 19px'],
+  none:   ()=>['none','auto']
+};
+const STYLES = [
+ ['Arena','🏜️','#ecd49a','#e3c78a','#4f9d52','dots','#0002','#2b3a1f',0],
+ ['Pasto','🌿','#8fd16b','#7cc25a','#3b7d34','stripes','#ffffff22','#1f3a17',0],
+ ['Nieve','❄️','#eaf4ff','#d9ebfb','#8fb8dd','dots','#ffffff','#1d3a57',0],
+ ['Playa','🏖️','#f3deb0','#bfe6ee','#2aa6c7','waves','#2aa6c744','#0c4a5c',0],
+ ['Noche','🌙','#1d2547','#252e57','#6f7bd1','stars','#ffffff99','#e8ecff',1],
+ ['Lava','🌋','#4a1a12','#5c2215','#ff6a1a','diag','#ff6a1a33','#ffd9b8',1],
+ ['Dulces','🍬','#ffd6ec','#ffc2e2','#ff5fa8','dots','#ffffff','#7a1f4d',0],
+ ['Neón','🟣','#12091f','#1b0e2e','#00f0ff','grid','#ff2bd633','#bff9ff',1],
+ ['Cañón','🌵','#e0a46a','#d28f55','#a8522b','dots','#0002','#4a210c',0],
+ ['Selva','🌴','#3f8f4a','#357d40','#1f5a2a','stripes','#00000022','#e9ffe8',1],
+ ['Espacio','🚀','#0b1030','#101846','#8a6bff','stars','#ffffffcc','#e6e1ff',1],
+ ['Hielo','🧊','#cdeefa','#b8e4f5','#4fb3d9','diag','#ffffff88','#0d4660',0],
+ ['Otoño','🍂','#e8b46a','#d99a4e','#a34e1c','dots','#8b3a0f44','#4a2208',0],
+ ['Cerezo','🌸','#ffe0ea','#ffd0df','#e86a9a','dots','#ffffff','#7a2a4a',0],
+ ['Barro','🟫','#8b6b4a','#7a5b3d','#4e3623','dots','#0003','#f3e3cf',1],
+ ['Asfalto','🛣️','#4a4d55','#42454c','#f4c20d','none','','#f5f5f5',1],
+ ['Atletismo','🏟️','#d9532e','#cc4a27','#ffffff','stripes','#ffffff14','#ffffff',1],
+ ['Océano','🌊','#2d8fd0','#2580c0','#0d4f8b','waves','#ffffff44','#eaf6ff',1],
+ ['Pantano','🐸','#6a8a3a','#5d7b30','#3a4f1c','dots','#cfe08a55','#f1f7d9',1],
+ ['Montaña','⛰️','#9aa3ad','#8b949e','#5b6570','diag','#00000018','#1c2329',0],
+ ['Circuito','💾','#0f3d2e','#124733','#39ffa0','grid','#39ffa044','#c9ffe6',1],
+ ['Retro','🕹️','#2b1b4d','#35235c','#ffb000','checks','#ffffff0d','#ffe8a8',1],
+ ['Oro','🏆','#f2d36b','#e8c24f','#b8860b','dots','#ffffff88','#5a4100',0],
+ ['Algodón','☁️','#bfe3ff','#a9d6f8','#6fb2e6','dots','#ffffff','#1d4466',0],
+ ['Bosque','🌲','#2f6b3f','#285c36','#174026','stripes','#ffffff14','#dff5e2',1],
+ ['Atardecer','🌅','#ff9e66','#f2825a','#b53c3c','stripes','#ffffff22','#4a1a10',0],
+ ['Menta','🍃','#bff0d4','#aee6c8','#36b37e','dots','#ffffff','#11503a',0],
+ ['Carnaval','🎉','#ffcf33','#ff7a59','#6a2fd8','checks','#ffffff22','#3a1666',0],
+ ['Piedra','🪨','#b9b3a8','#aaa397','#6d675c','dots','#0002','#2a2620',0],
+ ['Arcoíris','🌈','#ffd6a5','#caffbf','#a06cd5','stripes','#ffffff55','#3a2a5a',0]
+];
+let styleIdx = Math.random()*STYLES.length|0;
+function applyStyle(){
+  const q = +new URLSearchParams(location.search).get('style');
+  if(q >= 1 && q <= STYLES.length) styleIdx = q - 1;
+  else if(CONFIG.STYLE_ROTATE === 'random'){ let n; do n = Math.random()*STYLES.length|0; while(n === styleIdx); styleIdx = n; }
+  else styleIdx = (styleIdx + 1) % STYLES.length;
+  const [name, icon, l1, l2, edge, pk, pc, ink, dk] = STYLES[styleIdx], [img, size] = PAT[pk](pc), st = document.getElementById('track').style;
+  const v = {'--l1':l1,'--l2':l2,'--edge':edge,'--pat':img,'--psz':size,'--ink2':ink,'--ln':dk?'#fff4':'#fff8','--gl':dk?'#fff6':'#0004','--gt':dk?'#0004':'#0001'};
+  for(const k in v) st.setProperty(k, v[k]);
+  const el = document.getElementById('stylename');
+  el.textContent = `${icon} Pista ${styleIdx+1}/${STYLES.length} · ${name}`;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+
+/* ============ ESTADO ============ */
+const state = {}, lastChoice = {}, likeAcc = {}, crew = {}, contrib = {}, countryInteractions = {}, profiles = {};
+let racing = true, raceInitialized = false;
+const GUT = 122, TW = 205;
+const esc = x => String(x).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const hue = x => [...String(x)].reduce((h,ch)=>(h*31+ch.charCodeAt(0))%360, 7);
+const nm = u => (profiles[u] && profiles[u].name) || u;
+function seen(user, avatar, name){
+  const p = profiles[user] || (profiles[user] = {name:user});
+  if(name) p.name = name; if(avatar) p.avatar = avatar; return p;
+}
+/* Avatar: foto del usuario; si falta o no carga, círculo de color con su inicial */
+function av(user, cls=''){
+  const p = profiles[user] || {name:user};
+  const ini = esc((p.name||'?').trim().charAt(0).toUpperCase() || '?');
+  return `<span class="av ${cls}" style="--h:${hue(user)}"><i>${ini}</i>${p.avatar?`<img src="${esc(p.avatar)}" alt="" onerror="this.remove()">`:''}</span>`;
+}
+
+const act = {}, ICONS = {chat:'💬', like:'❤️', gift:'🎁', follow:'➕', share:'↗️'};
+/* Avatar en círculo con la insignia de su último evento abajo (💬 comentario · ❤️ like · 🎁 regalo) */
+const avBadge = (u, cls='') => { const a = act[u] || {type:'chat'};
+  return `<span class="avw ${cls}">${av(u)}<b class="ev ${a.type}">${ICONS[a.type]||'💬'}</b></span>`; };
+/* Muestra al espectador sobre la pista de su país con el ícono de lo que acaba de hacer */
+function appear(id, user, type){
+  const l = crew[id]; if(!l) return;
+  const i = l.indexOf(user); if(i > -1) l.splice(i,1);
+  l.unshift(user); act[user] = {type, t:T0};
+  drawCrew(id, user);
+}
+
+function laneMarkup(c,i){
+  return `
+    <div class="lane" id="lane-${c.id}">
+      <div class="guide" data-f=".25" data-m="25 m"></div><div class="guide" data-f=".5" data-m="50 m"></div><div class="guide" data-f=".75" data-m="75 m"></div>
+      <div class="start"></div><div class="finish"></div>
+      <div class="label"><b>${esc(c.name)}</b></div>
+      <div class="turtle" id="t-${c.id}">${turtleSVG(c)}<span class="crown">👑</span><span class="emote" id="e-${c.id}"></span><div class="crew" id="c-${c.id}"></div></div>
+      <span class="pct" id="p-${c.id}"></span>
+    </div>`;
+}
+
+function buildDOM(){
+  document.getElementById('lanes').innerHTML = COUNTRIES.map(laneMarkup).join('');
+}
+
+function reset(){
+  applyStyle();
+  pickCountries();
+  buildDOM();
+  makeRigs();
+  [state,likeAcc,crew,contrib,countryInteractions].forEach(o=>Object.keys(o).forEach(k=>delete o[k]));
+  COUNTRIES.forEach(c=>{ state[c.id]=0; crew[c.id]=[]; contrib[c.id]={}; countryInteractions[c.id]=0; });
+  document.getElementById('winner').classList.remove('show');
+  racing = true; fxHit = {}; lastLead = null; render(); fitScreen();
+  SFX.play('start');
+}
+
+function initializeRace(previousResults){
+  if(raceInitialized) return;
+  const previousTop = Array.isArray(previousResults)
+    ? previousResults
+      .filter(result=>result && ALL_COUNTRIES.some(c=>c.id===result.id) && Number.isSafeInteger(result.interactions))
+      .sort((a,b)=>b.interactions-a.interactions)
+      .slice(0,STARTING_LANES)
+    : [];
+  nextCountries = previousTop.map(result=>ALL_COUNTRIES.find(c=>c.id===result.id)).filter(Boolean);
+  raceInitialized = true;
+  reset();
+}
+
+/* Reparte el alto vertical disponible entre los carriles (mín. 150 px; con 5 carriles el overlay entero se reescala para entrar) */
+function layoutVertical(){
+  const app = document.getElementById('app'), cs = getComputedStyle(document.documentElement), px = v => parseFloat(cs.getPropertyValue(v)) || 0;
+  const n = Math.max(1, COUNTRIES.length);
+  const others = document.getElementById('bar').offsetHeight + 10 + document.querySelector('.comment-lane').offsetHeight + 8;
+  const avail = 1280 - px('--safe-t') - px('--safe-b') - others - 8*(n-1);
+  const lh = Math.max(150, Math.min(230, Math.floor(avail / n)));
+  document.getElementById('track').style.setProperty('--lane', lh + 'px');
+}
+function render(){
+  layoutVertical();
+  const run = document.getElementById('track').clientWidth - GUT - TW - 16;
+  document.querySelectorAll('.guide').forEach(g=>g.style.left = (GUT + TW + Number(g.dataset.f)*run) + 'px');
+  const max = Math.max(...Object.values(state));
+  const members = {}; Object.values(lastChoice).forEach(id=>members[id]=(members[id]||0)+1);
+  COUNTRIES.forEach(c=>{
+    const t = document.getElementById('t-'+c.id);
+    if(rig[c.id]) rig[c.id].target = Math.min(state[c.id]/CONFIG.GOAL,1)*run;
+    t.classList.toggle('leader', max>0 && state[c.id]===max);
+    document.getElementById('p-'+c.id).textContent = state[c.id] ? state[c.id] + ' m' : '';
+  });
+}
+
+/* Los 4 últimos que empujaron van montados sobre el caparazón; el más reciente salta y muestra su nombre */
+function drawCrew(id, pop){
+  const list = crew[id], shown = list.slice(0,3).reverse();
+  const p = pop && profiles[pop];
+  const firstWords = p && p.comment ? p.comment.trim().split(/\s+/).slice(0,2).join(' ') : '';
+  const bubble = firstWords && Date.now() - p.commentAt < 8000
+    ? `<span class="chatbubble"><span>${esc(firstWords)}</span></span>`
+    : '';
+  document.getElementById('c-'+id).innerHTML = shown.map(u=>avBadge(u, u===pop?'pop':'')).join('')
+    + (list.length>3 ? `<span class="more">+${list.length-3}</span>` : '')
+    + (pop && !bubble ? `<span class="nick">${esc(nm(pop))}</span>` : '')
+    + bubble;
+}
+
+/* ============ FÍSICA ============
+   Cada tortuga es un cuerpo con gravedad y resortes amortiguados:
+   - avanza deslizándose lento hacia su meta (resorte), sin saltos bruscos
+   - cada punto la hace dar un pequeño salto; al caer se aplasta y rebota
+   - cabeza y cola cuelgan con peso y se balancean por inercia (se quedan atrás al arrancar)
+   - las 4 patas caminan en diagonal, despacio incluso en reposo, desde que carga el overlay */
+const G = 1400, RM = matchMedia('(prefers-reduced-motion: reduce)').matches ? .3 : 1;
+const rig = {}, LEG_OFF = [Math.PI, 0, 0, Math.PI];
+const spr = (o, rest, k, c, dt, f=0) => { o.w += (k*(rest-o.a) - c*o.w + f)*dt; o.a += o.w*dt; };
+
+function makeRig(c){
+    const el = document.getElementById('t-'+c.id), q = x => el.querySelector(x);
+    rig[c.id] = { el, shell:q('.shell'), head:q('.head'), tail:q('.tail'), shd:q('.shd'),
+      hp:q('.head').dataset.p.split(','), tp:q('.tail').dataset.p.split(','),
+      legs:[...el.querySelectorAll('.leg')].map(g=>({g, p:g.dataset.p.split(',')})),
+      x:0, vx:0, y:0, vy:0, target:0, phase:Math.random()*6.28, ph:Math.random()*6.28,
+      H:{a:6,w:0}, T:{a:-5,w:0}, P:{a:0,w:0}, S:{a:0,w:0},
+      id:c.id, em:q('.emote'), mp:q('.mp'), mo:q('.mo'), tr:q('.tr'), sg:q('.sg'), bls:[...el.querySelectorAll('.bl')],
+      eyes:[...el.querySelectorAll('.eye')].map(g=>({R:+g.dataset.r, x:+g.dataset.x, ew:g.querySelector('.ew'), ep:g.querySelector('.ep'), ea:g.querySelector('.ea'), eb:g.querySelector('.eb')})),
+      turbo:0, m:{...MOODS.calm}, base:'calm', ov:'', ovUntil:0, lastPush:T0, rank:0, won:false, nb:1+Math.random()*3, blink:0 };
+}
+
+function makeRigs(){
+  Object.keys(rig).forEach(k=>delete rig[k]);
+  COUNTRIES.forEach(makeRig);
+}
+
+function addCountryToRace(country){
+  if(COUNTRIES.some(c=>c.id===country.id)) return true;
+  if(COUNTRIES.length>=MAX_LANES || !racing) return false;
+  const added={...country};
+  COUNTRIES.push(added);
+  state[added.id]=0; crew[added.id]=[]; contrib[added.id]={}; countryInteractions[added.id]=0;
+  document.getElementById('lanes').insertAdjacentHTML('beforeend', laneMarkup(added, COUNTRIES.length-1));
+  makeRig(added);
+  render(); fitScreen();
+  SFX.play('join'); toast(`🌍 ¡${esc(added.name)} entra a la carrera!`);
+  return true;
+}
+/* ============ ESTADO ANÍMICO ============
+   La cara se arma con parámetros que se suavizan hacia el ánimo actual:
+   mc=sonrisa(+)/ceño(-)  mo=boca abierta  eo=ojos abiertos  hp=ojos felices ^ ^  br=cejas (+tristes, -enojadas)
+   bl=rubor  tr=lágrima  hd=cabeza (+baja)  spd=ritmo de pasos  sg=lentes de sol */
+const M = o => ({mc:.35,mo:0,eo:1,hp:0,br:0,bl:0,tr:0,hd:0,spd:1,sg:0,...o});
+const MOODS = {
+  calm:   M({}),
+  smug:   M({mc:.7, eo:.8, br:-.2, bl:.2, hd:-4, spd:1.1, sg:1}),   // líder: lentes de sol
+  happy:  M({mc:1, mo:.15, hp:1, br:.1, bl:.6, hd:-3, spd:1.3}),
+  excited:M({mc:1, mo:.8, eo:1.25, br:.2, bl:.4, hd:-6, spd:2}),   // recién empujada
+  love:   M({mc:1, mo:.2, hp:1, br:.2, bl:1, hd:-2, spd:1.2}),     // regalo
+  sad:    M({mc:-1, eo:.8, br:1, tr:1, hd:10, spd:.55}),           // muy atrás / perdió
+  worried:M({mc:-.2, mo:.25, eo:1.2, br:.8, hd:2, spd:1.5}),       // cerca de la meta
+  angry:  M({mc:-.7, mo:.1, eo:.8, br:-1, hd:3, spd:1.6}),         // la pasaron
+  sleepy: M({mc:.1, eo:.12, br:.3, hd:12, spd:.35}),               // sin empujones por 12 s
+  win:    M({mc:1, mo:.9, hp:1, bl:.8, hd:-8, spd:2.2})
+};
+function say(r, e, loop){ // emoji flotante sobre la cabeza
+  r.em.textContent = e; r.em.className = 'emote'; void r.em.offsetWidth;
+  r.em.className = 'emote ' + (loop ? 'loop' : 'pop');
+}
+function unsay(r){ r.em.className = 'emote'; r.em.textContent = ''; }
+function react(r, mood, dur, emoji){ r.ov = mood; r.ovUntil = T0 + dur; if(emoji) say(r, emoji); }
+
+function moods(){ // se evalúa 4 veces por segundo
+  COUNTRIES.forEach(c=>{ // los avatares salen de la pista tras CREW_TTL s sin actividad
+    const l = crew[c.id]; if(!l || !l.length) return;
+    const keep = l.filter(u => T0 - (act[u] ? act[u].t : 0) < CONFIG.CREW_TTL);
+    if(keep.length !== l.length){ crew[c.id] = keep; drawCrew(c.id); }
+  });
+  const vals = COUNTRIES.map(c=>state[c.id]), max = Math.max(...vals);
+  const ld = max >= 8 ? COUNTRIES.filter(c=>state[c.id]===max) : [];
+  if(racing && ld.length === 1){ if(lastLead && lastLead !== ld[0].id){ SFX.play('lead'); toast(`👑 ¡${esc(ld[0].name)} toma la delantera!`); } lastLead = ld[0].id; }
+  COUNTRIES.forEach(c=>{
+    const r = rig[c.id]; if(!r) return;
+    const sc = state[c.id], rank = 1 + vals.filter(v=>v>sc).length, p = sc/CONFIG.GOAL;
+    if(racing && max >= 4 && r.rank && r.ovUntil < T0){
+      if(rank > r.rank){ react(r,'angry',2,'💢'); SFX.play('lost'); }          // la pasaron
+      else if(rank < r.rank){ react(r,'happy',1.6,'✨'); SFX.play('pass'); }   // adelantó
+    }
+    r.rank = rank;
+    let m = 'calm';
+    if(!racing) m = r.won ? 'win' : 'sad';
+    else if(T0 - r.lastPush > 12) m = 'sleepy';
+    else if(max > 0 && sc === max) m = p > .85 ? 'worried' : 'smug';
+    else if(max - sc > CONFIG.GOAL*.18) m = 'sad';
+    else if(p > .85) m = 'worried';
+    if(m !== r.base){
+      if(m === 'worried') say(r,'💦');
+      if(m === 'sleepy') say(r,'💤',true);
+      else if(r.base === 'sleepy') unsay(r);
+      r.base = m;
+    }
+  });
+}
+
+function face(r, dt){
+  const tg = MOODS[r.ovUntil > T0 ? r.ov : r.base], m = r.m, k = Math.min(1, dt*7);
+  for(const key in tg) m[key] += (tg[key] - m[key])*k;
+  if(T0 > r.nb){ r.blink = T0 + .13; r.nb = T0 + 2 + Math.random()*3.5; }   // parpadeo
+  const wide = Math.min(1.3, m.eo), eo = wide*(T0 < r.blink ? .08 : 1), hp = m.hp > .5;
+  r.eyes.forEach((e,i)=>{
+    const R = e.R;
+    e.ew.setAttribute('ry', Math.max(.5, R*eo)); e.ew.setAttribute('opacity', hp?0:1);
+    e.ep.setAttribute('ry', Math.max(.3, Math.min(R*.45, R*eo*.8))); e.ep.setAttribute('cy', 35 + m.tr*1.3); e.ep.setAttribute('opacity', hp?0:1);
+    e.ea.setAttribute('opacity', hp?1:0);
+    e.eb.setAttribute('transform', `translate(0 ${-(wide-1)*3}) rotate(${m.br*26*(i===0?-1:1)} ${e.x} ${35-R-2.5})`);
+  });
+  r.mp.setAttribute('d', `M103 45 Q108.5 ${45 + m.mc*4.5} 114 45`);
+  const oy = m.mo*3.8;
+  r.mo.setAttribute('ry', Math.max(0,oy)); r.mo.setAttribute('cy', 45 + m.mo*1.5); r.mo.setAttribute('opacity', oy > .4 ? 1 : 0);
+  r.bls.forEach(b=>b.setAttribute('opacity', Math.max(0,m.bl)*.8));
+  r.tr.setAttribute('opacity', Math.max(0,m.tr)); r.sg.setAttribute('opacity', Math.max(0,m.sg));
+}
+
+function kick(id){ // empujón: carita emocionada + pequeño salto (solo si está en el suelo)
+  const r = rig[id]; if(!r) return;
+  r.lastPush = T0;
+  if(r.ovUntil < T0 || r.ov === 'excited') react(r,'excited',1);
+  if(r.y > -1){ r.vy = -150*TW/112; r.H.w -= 60; r.T.w += 40; }
+}
+let tPrev = performance.now(), T0 = 0, mt = 0;
+function frame(now){
+  const dt = Math.min(.033, (now - tPrev)/1000); tPrev = now; T0 += dt;
+  if(T0 - mt > .25){ mt = T0; moods(); }
+  for(const r of Object.values(rig)){
+    const tb = T0 < r.turbo;                              // TURBO: resorte más rígido = arranca y llega rápido
+    const ax = (tb?30:10)*(r.target - r.x) - (tb?9.5:5.5)*r.vx;   // avance lento y amortiguado
+    r.vx += ax*dt; r.x += r.vx*dt;
+    r.vy += G*dt; r.y += r.vy*dt;                        // gravedad
+    if(r.y > 0){                                         // aterriza: rebote pequeño + aplastamiento
+      const imp = r.vy; r.y = 0; r.vy = imp > 80 ? -imp*.18 : 0;
+      if(imp > 80){ r.S.w += imp*.5; r.H.w += imp*.25; r.T.w -= imp*.15; }
+    }
+    const sp = Math.min(Math.abs(r.vx), 220);
+    r.phase += dt*(1.4 + sp*.014)*r.m.spd*(tb?2.2:1);                       // paso lento, siempre activo
+    const amp = (13 + sp*.05)*RM, bob = -Math.abs(Math.sin(r.phase))*1.2*RM;
+    spr(r.H, 6 + r.m.hd + (Math.sin(T0*.9 + r.ph)*4 + Math.sin(r.phase*2)*2)*RM, 45, 6, dt, -ax*1.4); // cabeza: peso + inercia
+    spr(r.T, -5 + Math.sin(T0*1.3 + r.ph)*7*RM, 40, 5, dt, ax*1.1);                           // cola
+    spr(r.P, -ax*.04, 30, 6, dt);                        // cabeceo del caparazón
+    spr(r.S, 0, 120, 9, dt);                             // aplastamiento
+    const yy = r.y + bob;
+    r.el.classList.toggle('turbo', tb);
+    r.el.style.transform = `translate3d(${r.x}px,${yy}px,0)`;
+    r.shell.setAttribute('transform', `translate(60 72) rotate(${r.P.a}) scale(${1 + r.S.a*.006} ${1 - r.S.a*.01}) translate(-60 -72)`);
+    r.head.setAttribute('transform', `rotate(${r.H.a} ${r.hp[0]} ${r.hp[1]})`);
+    r.tail.setAttribute('transform', `rotate(${r.T.a} ${r.tp[0]} ${r.tp[1]})`);
+    r.legs.forEach((l,i)=>{
+      const ph = r.phase + LEG_OFF[i];
+      l.g.setAttribute('transform', `translate(0 ${-Math.max(0,Math.cos(ph))*2.5*RM}) rotate(${Math.sin(ph)*amp} ${l.p[0]} ${l.p[1]})`);
+    });
+    r.shd.setAttribute('transform', `translate(0 ${-yy/(TW/120)}) translate(60 81) scale(${Math.max(.5,1 + yy*.03)}) translate(-60 -81)`);
+    face(r, dt);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ============ RELOJ, EVENTOS/MIN Y AUTO-AVANCE ============ */
+const t0 = Date.now(), evts = [];
+const pad = n => String(n).padStart(2,'0');
+function countEvent(){ // COMBO: eventos seguidos (<3 s entre ellos) → sonido + aviso en 5/10/20/40/80
+  const n = Date.now(); evts.push(n); cN = (n - cT < 3000) ? cN + 1 : 1; cT = n;
+  if(COMBOS.includes(cN)){ SFX.play('combo'); toast(`🔥 COMBO ×${cN}`); confetti(Math.min(cN,40)); }
+}
+function evPerMin(){ // chats + likes + regalos en los últimos 60 s (proyectado mientras el overlay lleva menos de 1 min)
+  const now = Date.now();
+  while(evts.length && now - evts[0] > 60000) evts.shift();
+  return evts.length * 60 / Math.min(60, Math.max(10, (now - t0)/1000));
+}
+function tick(){
+  const sec = Math.floor((Date.now() - t0)/1000), r = evPerMin(), low = r < CONFIG.LOW_RATE;
+  document.getElementById('clock').textContent = `⏱ ${pad(sec/3600|0)}:${pad(sec/60%60|0)}:${pad(sec%60)}`;
+  const el = document.getElementById('rate');
+  el.textContent = `⚡ ${Math.round(r)} ev/min` + (low ? ' · auto' : '');
+  el.classList.toggle('low', low);
+}
+setInterval(tick, 500);
+document.getElementById('reload').addEventListener('click', () => location.reload());
+
+/* Con poca actividad, una tortuga al azar avanza 1–2 m cada pocos segundos. Nunca cruza la meta sola. */
+function autoStep(){
+  if(racing && evPerMin() < CONFIG.LOW_RATE){
+    const opts = COUNTRIES.filter(c => state[c.id] < CONFIG.GOAL - 1);
+    if(opts.length){
+      const c = opts[Math.random()*opts.length|0];
+      const m = Math.min(CONFIG.AUTO_MIN + (Math.random()*(CONFIG.AUTO_MAX - CONFIG.AUTO_MIN + 1)|0), CONFIG.GOAL - 1 - state[c.id]);
+      addPoints(c.id, m);
+    }
+  }
+  setTimeout(autoStep, CONFIG.AUTO_EVERY[0] + Math.random()*(CONFIG.AUTO_EVERY[1] - CONFIG.AUTO_EVERY[0]));
+}
+setTimeout(autoStep, CONFIG.AUTO_EVERY[0]);
+
+
+/* ============ SONIDO (gamificado) ============
+   Todo sintetizado con Web Audio: no hay archivos de audio. Cada evento suena distinto,
+   y comentarios/likes forman una escalera de notas: mientras más seguidos, más agudo (combo, se reinicia a los 2,5 s).
+   Hitos: primera tortuga en pasar 25/50/75 m (campana), última recta (85 m) y fanfarria al ganar. */
+const SFX = (() => {
+  let ctx = null, master = null, combo = 0, lastCombo = 0;
+  const lastAt = {}, SCALE = [0,2,4,5,7,9,11,12];
+  let on = new URLSearchParams(location.search).get('mute') !== '1';
+  const note = n => 523.25 * Math.pow(2, n/12);                       // C5 + semitonos
+  const ok = (k, ms) => { const t = performance.now(); if(lastAt[k] && t - lastAt[k] < ms) return false; lastAt[k] = t; return true; };
+  function ac(){
+    if(!ctx){
+      try{
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        master = ctx.createGain(); master.gain.value = CONFIG.VOLUME;
+        const comp = ctx.createDynamicsCompressor(); master.connect(comp); comp.connect(ctx.destination);
+      }catch(e){ return null; }
+    }
+    if(ctx.state === 'suspended') ctx.resume().catch(()=>{});
+    return ctx;
+  }
+  function tone(f, at, dur, type, vol, to){
+    const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+    if(to) o.frequency.exponentialRampToValueAtTime(Math.max(30, to), t + dur);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .03);
+  }
+  function noise(dur, at, vol){ // ruido filtrado = aplauso / multitud
+    const t = ctx.currentTime + at, n = ctx.sampleRate*dur|0, b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
+    for(let i=0;i<n;i++) d[i] = (Math.random()*2-1)*(1 - i/n);
+    const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = 'bandpass'; f.frequency.value = 2500; s.buffer = b; g.gain.value = vol; s.connect(f); f.connect(g); g.connect(master); s.start(t);
+  }
+  function step(){ const n = Date.now(); combo = (n - lastCombo < 2500) ? Math.min(combo + 1, 7) : 0; lastCombo = n; return note(SCALE[combo]); }
+  const fx = {
+    chat(){ if(ok('chat',90))  tone(step(), 0, .13, 'triangle', .14); },
+    like(){ if(ok('like',70))  tone(step() * 1.5, 0, .07, 'square', .05); },
+    follow(){ tone(note(0), 0, .2, 'triangle', .22); tone(note(7), .09, .26, 'triangle', .22); tone(note(16), .2, .3, 'sine', .1); },
+    share(){ tone(260, 0, .26, 'sawtooth', .07, 1300); [4,7,12].forEach((n,i)=>tone(note(n), .12 + i*.08, .2, 'sine', .2)); },
+    gift(){ tone(988, 0, .09, 'square', .12); tone(1319, .08, .55, 'square', .12); tone(2637, .16, .35, 'sine', .1); tone(3136, .26, .3, 'sine', .07); },
+    pass(){ if(ok('pass',500)) tone(480, 0, .16, 'sine', .2, 960); },
+    lost(){ if(ok('lost',800)) tone(240, 0, .22, 'sawtooth', .06, 120); },
+    turbo(){ tone(180, 0, .7, 'sawtooth', .1, 1900); tone(90, 0, .55, 'square', .07, 900); tone(1760, .55, .3, 'sine', .12); },
+    milestone(){ tone(880, 0, .55, 'sine', .22); tone(1320, 0, .45, 'sine', .1); },
+    final(){ [0,.13,.26,.39].forEach(t=>tone(1000, t, .07, 'square', .08)); },
+    join(){ tone(note(7), 0, .1, 'sine', .18); tone(note(14), .08, .22, 'sine', .18); },
+    lead(){ [0,4,7].forEach((n,i)=>tone(note(n+12), i*.07, .16, 'square', .1)); tone(note(24), .24, .35, 'triangle', .14); },
+    combo(){ [0,2,4,7,9,12].forEach((n,i)=>tone(note(n), i*.05, .12, 'triangle', .16)); },
+    level(){ [0,4,7,12,16].forEach((n,i)=>tone(note(n+7), i*.08, .25, 'square', .1)); noise(.6, 0, .1); },
+    turbo2(){ fx.turbo(); tone(note(19), .35, .5, 'sine', .16); tone(note(24), .5, .5, 'sine', .12); },
+    mega(){ fx.turbo2(); [0,4,7,12,16,19,24].forEach((n,i)=>tone(note(n), .7 + i*.07, .5, 'triangle', .18)); noise(.9, .7, .15); },
+    cheer(){ noise(1.8, 0, .22); },
+    start(){ [0,.28,.56].forEach(t=>tone(440, t, .14, 'square', .08)); tone(880, .84, .32, 'square', .1); },
+    win(){ [0,3,7,12].forEach((n,i)=>tone(note(n), i*.13, .2, 'triangle', .26)); [12,16,19].forEach(n=>tone(note(n), .6, 1, 'triangle', .16)); }
+  };
+  const api = {
+    play(k){ if(!on || !CONFIG.SOUND || !fx[k]) return; if(ac() && ctx.state === 'running') fx[k](); }, // si el navegador aún bloquea el audio, no encola sonidos
+    unlock(){ ac(); },
+    toggle(){ on = !on; if(on) ac(); return on; },
+    get on(){ return on; }
+  };
+  const btn = document.getElementById('snd'), paint = () => { btn.textContent = on ? '🔊' : '🔇'; btn.setAttribute('aria-pressed', on); };
+  paint();
+  btn.addEventListener('click', () => { api.toggle(); paint(); api.play('follow'); });
+  document.addEventListener('keydown', e => { if(e.key.toLowerCase()==='m'){ api.toggle(); paint(); api.play('follow'); } });
+  ['pointerdown','keydown'].forEach(ev => document.addEventListener(ev, api.unlock, {once:true}));
+  return api;
+})();
+let fxHit = {}, lastLead = null, lastWinner = null, streak = 0, giftLv = 1, cN = 0, cT = 0;
+const COMBOS = [5,10,20,40,80];
+const WINS = (()=>{ try{ return JSON.parse(localStorage.getItem('tr_wins')) || {}; }catch(e){ return {}; } })();
+const saveWins = () => { try{ localStorage.setItem('tr_wins', JSON.stringify(WINS)); }catch(e){} };
+function toast(html, cls=''){
+  const box = document.getElementById('toasts'); if(!box) return;
+  const t = document.createElement('div'); t.className = 'toast ' + cls; t.innerHTML = html; box.prepend(t);
+  while(box.children.length > 3) box.lastElementChild.remove();
+  setTimeout(()=>t.remove(), 3300);
+}
+function confetti(n=30, set=['🎉','✨','⭐','🎊']){
+  const L = document.getElementById('fxl'); if(!L || RM < 1) return;
+  const W = L.clientWidth, Hh = L.clientHeight;
+  for(let i=0;i<n;i++){
+    const p = document.createElement('i'); p.className = 'cf'; p.textContent = set[Math.random()*set.length|0];
+    p.style.cssText = `left:${Math.random()*W}px;font-size:${14+Math.random()*16}px`; L.appendChild(p);
+    p.animate([{transform:'translateY(-30px) rotate(0)',opacity:1},{transform:`translateY(${Hh+40}px) rotate(${Math.random()*720-360}deg)`,opacity:.9}],
+      {duration:1600+Math.random()*1600, delay:Math.random()*500, easing:'cubic-bezier(.3,.6,.6,1)'}).onfinish = () => p.remove();
+  }
+}
+
+/* ============ API PÚBLICA ============ */
+const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function sim(a,b){ // similitud 0..1 (Levenshtein)
+  if(a===b) return 1;
+  const m=a.length, n=b.length; if(!m||!n) return 0;
+  let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const cur=[i];
+    for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev=cur; }
+  return 1-prev[n]/Math.max(m,n);
+}
+/* Normaliza el comentario y busca países reconocidos, aunque todavía no tengan carril. */
+function findCountry(text){
+  const t = norm(text), words = t.split(/[^a-z0-9]+/).filter(Boolean);
+  let best = null, bestS = 0;
+  for(const c of ALL_COUNTRIES) for(const a0 of c.alias){
+    const a = norm(a0);
+    if(!/[a-z]/.test(a)){ if(t.includes(a)) return c; continue; } // emoji de bandera
+    for(const w of words){
+      const s = (a.length<=5 || w.length<3) ? (w===a?1:0) : sim(w,a); // siglas cortas: solo exactas
+      if(s>bestS){ bestS=s; best=c; }
+    }
+  }
+  return bestS >= CONFIG.MATCH ? best : null;
+}
+/* Si el espectador aún no tiene país, se le asigna uno al azar */
+function ensureCountry(user){
+  if(lastChoice[user] && COUNTRIES.some(c=>c.id===lastChoice[user])) return lastChoice[user];
+  delete lastChoice[user];
+  if(!CONFIG.RANDOM_ASSIGN || !COUNTRIES.length) return null;
+  return lastChoice[user] = COUNTRIES[Math.random()*COUNTRIES.length|0].id;
+}
+
+function recordCountryInteraction(id){
+  if(racing && id in countryInteractions) countryInteractions[id]++;
+}
+
+function addPoints(id, pts, user, type){
+  if(!racing || !(id in state)) return;
+  const before = state[id];
+  state[id] += pts;
+  kick(id);
+  if(user) SFX.play(type || 'chat');
+  [25,50,75].forEach(m=>{ if(before < m && state[id] >= m && !fxHit[m]){ fxHit[m] = 1; SFX.play('milestone'); } });
+  if(state[id] >= CONFIG.GOAL*.85 && state[id] < CONFIG.GOAL && !fxHit.f){ fxHit.f = 1; SFX.play('final'); }
+  if(user) gainFx(id, pts, type || 'chat');
+  if(user){
+    contrib[id][user] = (contrib[id][user]||0) + pts;
+    appear(id, user, type || 'chat');
+  }
+  render();
+  if(state[id] >= CONFIG.GOAL) win(id);
+}
+
+/* Aviso flotante "+3 m" con el ícono del evento sobre la tortuga que avanzó */
+function gainFx(id, pts, type){
+  const t = document.getElementById('t-'+id); if(!t) return;
+  t.querySelectorAll('.gain').forEach((g,i,all)=>{ if(all.length > 2) g.remove(); });
+  const g = document.createElement('span');
+  const tb = type === 'gift';
+  g.className = 'gain' + (tb ? ' turbo' : ''); g.textContent = tb ? `🚀 TURBO +${pts} m` : `${ICONS[type]||''} +${pts} m`;
+  t.appendChild(g); setTimeout(()=>g.remove(), tb ? 1800 : 1200);
+}
+
+function prepareNextRace(){
+  const results = COUNTRIES.map(c=>({
+    id:c.id,
+    name:c.name,
+    interactions:countryInteractions[c.id] || 0
+  }));
+  nextCountries = results
+    .sort((a,b)=>b.interactions-a.interactions)
+    .slice(0,STARTING_LANES)
+    .map(result=>ALL_COUNTRIES.find(c=>c.id===result.id))
+    .filter(Boolean);
+  pendingRaceResult = {raceId:new Date().toISOString(), countries:results};
+  sendPendingRaceResult();
+  return nextCountries;
+}
+
+function sendPendingRaceResult(){
+  if(pendingRaceResult && window.TurtleRace && window.TurtleRace.sendBackend){
+    window.TurtleRace.sendBackend('race-result', pendingRaceResult);
+  }
+}
+
+/* Ganador + los 3 que más empujaron (MVP) */
+function win(id){
+  racing = false;
+  SFX.play('win'); setTimeout(()=>SFX.play('cheer'), 400);
+  WINS[id] = (WINS[id]||0) + 1; streak = lastWinner === id ? streak + 1 : 1; lastWinner = id; saveWins();
+  confetti(100, ['🎉','🏆','⭐','🎊','✨']);
+  const next = prepareNextRace();
+  Object.values(rig).forEach(r=>{ r.won = r.id===id; r.ovUntil = 0; say(r, r.won ? '🎉' : '😢'); });
+  const c = COUNTRIES.find(x=>x.id===id);
+  const top = Object.entries(contrib[id]).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const w = document.getElementById('winner');
+  const pod = [...COUNTRIES].sort((x,y)=>state[y.id]-state[x.id]).slice(0,3)
+    .map((x,i)=>`<div class="pod"><span>${['🥇','🥈','🥉'][i]}</span>${flagMini(x)}<em>${esc(x.name)}</em><small>${Math.min(state[x.id],CONFIG.GOAL)} m</small></div>`).join('');
+  const fans = Object.values(lastChoice).filter(x=>x===id).length;
+  w.innerHTML = `<div class="wf">${flagMini(c)}</div><b>🏆 ${esc(c.name)}</b>
+    <span>🏅 ${WINS[id]} victoria${WINS[id]>1?'s':''}${streak>1?` · 🔥 racha ×${streak}`:''}${fans?` · 👥 ${fans} hinchas`:''}</span>
+    <div class="podium">${pod}</div>
+    <span>Ellos lo llevaron a la meta</span>
+    <div class="mvps">${top.map(([u,p],i)=>`<div class="mvp">${av(u,'big')}<em>${['⭐','🥈','🥉'][i]} ${esc(nm(u))}</em><small>${p} m</small></div>`).join('')}</div>
+    <span>Próxima carrera: ${next.map(country=>esc(country.name)).join(' · ')}</span>`;
+  w.classList.add('show');
+  setTimeout(reset, CONFIG.RESET_MS);
+}
+
+/* Cambia de país a un espectador (lo saca de la tripulación anterior) */
+function moveTo(user, id){
+  const prev = lastChoice[user];
+  if(prev && prev!==id && crew[prev]){ crew[prev] = crew[prev].filter(u=>u!==user); drawCrew(prev); }
+  lastChoice[user] = id;
+}
+
+/* user = id único; avatar = URL de la foto; name = nombre visible (opcional) */
+function onChat(user, text, avatar, name){
+  countEvent();
+  seen(user, avatar, name);
+  if(String(text || '').trim()){
+    profiles[user].comment = String(text).trim();
+    profiles[user].commentAt = Date.now();
+  }
+  showChat(user, name, text);
+  if(!racing) return;
+  const c = findCountry(text);
+  if(!c){
+    SFX.play('chat');
+    const g = ensureCountry(user);
+    if(g){ recordCountryInteraction(g); appear(g, user, 'chat'); }
+    render();
+    return;
+  }
+  if(!addCountryToRace(c)) return;
+  moveTo(user, c.id); // pasa al país que comentó
+  recordCountryInteraction(c.id);
+  addPoints(c.id, CONFIG.POINTS.chat, user, 'chat');
+}
+function showChat(user, name, text){
+  const comment = String(text || '').trim();
+  if(!comment) return;
+  const entry = document.createElement('div');
+  const avatar = document.createElement('div');
+  const copy = document.createElement('div');
+  const nickname = document.createElement('b');
+  const message = document.createElement('span');
+  entry.className = 'comment-entry';
+  avatar.innerHTML = av(user);
+  copy.className = 'comment-copy';
+  nickname.className = 'comment-name';
+  nickname.textContent = String(name || user || 'Usuario');
+  message.className = 'comment-text';
+  message.textContent = comment;
+  copy.append(nickname, message);
+  entry.append(avatar, copy);
+  const feed = document.getElementById('commentFeed');
+  feed.prepend(entry);
+  while(feed.children.length > 3) feed.lastElementChild.remove();
+}
+/* Likes/taps: cada LIKES_PER_STEP = 1 paso */
+function onLike(user, count = 1, avatar, name){
+  countEvent();
+  seen(user, avatar, name);
+  const id = ensureCountry(user);
+  if(!id) return;
+  recordCountryInteraction(id);
+  const acc = (likeAcc[user] || 0) + count, steps = Math.floor(acc / CONFIG.LIKES_PER_STEP);
+  likeAcc[user] = acc % CONFIG.LIKES_PER_STEP;
+  if(steps) addPoints(id, steps * CONFIG.POINTS.like, user, 'like');
+  else { SFX.play('like'); appear(id, user, 'like'); render(); }
+}
+/* Seguir y compartir */
+function onFollow(user, avatar, name){
+  countEvent(); seen(user, avatar, name);
+  const id = ensureCountry(user);
+  if(id){ recordCountryInteraction(id); addPoints(id, CONFIG.POINTS.follow, user, 'follow'); }
+}
+function onShare(user, avatar, name){
+  countEvent(); seen(user, avatar, name);
+  const id = ensureCountry(user);
+  if(id){ recordCountryInteraction(id); addPoints(id, CONFIG.POINTS.share, user, 'share'); }
+}
+/* Regalos (el contador suma regalos recibidos; repeatCount solo determina el nivel y potencia) */
+let giftTotal = 0;
+function onGift(user, count = 1, avatar, name){
+  countEvent();
+  giftTotal += 1;
+  const gEl = document.getElementById('gifts');
+  const E = CONFIG.GIFT_LEVEL_EVERY, lv = 1 + Math.floor(giftTotal / E), pc = giftTotal % E * 100 / E;
+  if(lv > giftLv){ giftLv = lv; SFX.play('level'); toast(`⭐ ¡NIVEL DE REGALOS ${lv}!`, 'gift'); confetti(50, ['🎁','⭐','✨','💛']); }
+  gEl.textContent = `🎁 ${giftTotal} · Nv ${lv}`; gEl.title = `Regalos: ${giftTotal % E}/${E} para el nivel ${lv+1}`;
+  gEl.style.background = `linear-gradient(90deg,#ffd75e ${pc}%,#fff1c2 ${pc}%)`;
+  gEl.classList.remove('bump'); void gEl.offsetWidth; gEl.classList.add('bump');
+  seen(user, avatar, name);
+  const id = ensureCountry(user), tier = [...CONFIG.GIFT_TIERS].reverse().find(t => count >= t.min) || CONFIG.GIFT_TIERS[0];
+  if(id && rig[id]){
+    recordCountryInteraction(id);
+    react(rig[id],'love',2.5,'❤️'); rig[id].turbo = T0 + tier.turbo;   // modo TURBO (más largo en regalos grandes)
+  }
+  if(id){
+    const pts = Math.round(CONFIG.POINTS.gift * tier.mult * (CONFIG.GIFT_PER_UNIT ? count : 1)), c = COUNTRIES.find(x=>x.id===id);
+    SFX.play(tier.sfx);
+    toast(`${tier.icon} ${esc(nm(user))} · ${tier.name}${count>1?' ×'+count:''} → ${esc(c.name)} +${pts} m`, 'gift');
+    confetti(tier.confetti, ['🎁','✨','⭐','💛']);
+    addPoints(id, pts, user, 'gift');
+  }
+}
+window.TurtleRace = { setRotating, onFollow, onShare, onLike, onChat, onGift, addPoints, reset, config: CONFIG };
+
+/* ============ CONEXIÓN CON EL BACKEND (opcional) ============
+   CONTRATO OVERLAY <-> BACKEND NODE  (conector NO oficial de TikTok, p. ej. tiktok-live-connector)
+
+   Transporte
+   - El overlay es CLIENTE WebSocket. Se abre con  ?ws=ws://localhost:21213  (puerto a elección).
+   - El backend envía eventos y el overlay devuelve el resumen por país al terminar cada carrera.
+     Si se cae, reintenta cada 3 s durante 5 min (CONFIG.RETRY_MS / RETRY_MAX_MS); después se detiene hasta tocar el aviso o el ⚙.
+   - El botón ⚙ de la barra abre la página de configuración del backend (usuario de TikTok): ?cfg=http://… o, por defecto, el mismo host:puerto del ws en http.
+   - Un mensaje = un JSON de texto con esta forma:  {"event": "<tipo>", "data": { ... }}
+   - race-history   (backend -> overlay): últimos eventos guardados por país para elegir las 3 tortugas iniciales.
+   - race-result    (overlay -> backend): países y cantidad de eventos de la carrera recién terminada.
+   - JSON inválido o eventos desconocidos se ignoran en silencio (no rompen el overlay).
+
+   Eventos  (event -> campos de data; "id" es el usuario, estable, p. ej. @usuario)
+   - chat    uniqueId, nickname, profilePictureUrl, comment      -> si el comentario nombra un país, el espectador se mueve a él y suma CONFIG.POINTS.chat
+   - like    uniqueId, nickname, profilePictureUrl, likeCount    -> cada LIKES_PER_STEP likes acumulados por usuario suman CONFIG.POINTS.like
+   - follow  uniqueId, nickname, profilePictureUrl               -> suma CONFIG.POINTS.follow
+   - share   uniqueId, nickname, profilePictureUrl               -> suma CONFIG.POINTS.share
+   - gift    uniqueId, nickname, profilePictureUrl, repeatCount  -> suma CONFIG.POINTS.gift (25 m = 25 %) y modo TURBO; con GIFT_PER_UNIT:true se multiplica por repeatCount
+
+   Reglas de campos
+   - uniqueId   obligatorio en la práctica: identifica al espectador (país elegido, acumulado de likes, MVP).
+                Si falta, el overlay usa nickname, y si tampoco, agrupa todo en "viewer".
+   - nickname   nombre visible; si falta se muestra uniqueId.
+   - profilePictureUrl  opcional. Alias aceptados: avatar, user.profilePicture.url, profilePicture.url.
+                Si falta o la imagen no carga, se dibuja un círculo con la inicial. Ojo: las URLs de la CDN de TikTok caducan.
+   - comment    texto crudo del chat (alias: text, content). La detección de país es tolerante a tildes, mayúsculas y faltas leves.
+   - likeCount / repeatCount  enteros >= 1 (alias: count). Si vienen vacíos se asume 1.
+   - Los campos pueden ir en data o en la raíz del mensaje; el tipo puede ir en "event" o en "type".
+
+   Responsabilidades del BACKEND (el overlay no las hace)
+   - Regalos con racha (giftType === 1 en el conector): enviar SOLO cuando termine la racha (repeatEnd === true),
+     con el repeatCount final; si no, el mismo regalo se cuenta varias veces.
+   - Los likes llegan en ráfagas: se pueden enviar tal cual (el overlay acumula) o agrupados sumando likeCount.
+   - Reconexión al live y manejo de errores del conector (si el live no está activo, reintentar cada 3 s hasta 5 min).
+   - Filtrado de spam o bots, si se necesita.
+
+   Aviso: un conector no oficial depende de endpoints internos de TikTok sin garantías: puede dejar de funcionar
+   sin previo aviso y su uso puede ir contra los términos de TikTok. Aísla el conector en el backend para poder
+   cambiarlo sin tocar el overlay. Revisa los nombres de eventos según la versión del conector.
+
+   Ejemplo mínimo de backend (Node, npm i ws tiktok-live-connector):
+     const { WebSocketServer } = require('ws');
+     const { WebcastPushConnection } = require('tiktok-live-connector');
+     const wss = new WebSocketServer({ port: 21213 });
+     const send = (event, data) => { const m = JSON.stringify({ event, data }); wss.clients.forEach(c => c.readyState === 1 && c.send(m)); };
+     const base = d => ({ uniqueId: d.uniqueId, nickname: d.nickname, profilePictureUrl: d.profilePictureUrl });
+     const tt = new WebcastPushConnection(process.env.TIKTOK_USER || 'tortulive');
+     tt.connect().catch(console.error);
+     tt.on('chat',   d => send('chat',   { ...base(d), comment: d.comment }));
+     tt.on('like',   d => send('like',   { ...base(d), likeCount: d.likeCount }));
+     tt.on('follow', d => send('follow', base(d)));
+     tt.on('share',  d => send('share',  base(d)));
+     tt.on('gift',   d => { if (d.giftType === 1 && !d.repeatEnd) return; send('gift', { ...base(d), repeatCount: d.repeatCount }); });
+
+   Pruebas sin backend: panel de botones (?panel=1) o TurtleRace.onFollow('ana'), onShare, onLike, onGift, onChat.
+*/
+function connectWS(url){
+  const st = document.getElementById('status');
+  let t0 = 0, timer = 0, ws = null;
+  const dot = document.getElementById('dot');
+  const setDot = (c, t) => { dot.className = c; dot.title = t; dot.setAttribute('aria-label', t); };
+  setDot('wait', 'Conectando…');
+  const show = (txt, auto) => { st.style.display='block'; st.textContent=txt; if(auto) setTimeout(()=>{ if(st.textContent===txt) st.style.display='none'; }, auto); };
+  const open = () => {
+    clearTimeout(timer);
+    if(!t0) t0 = Date.now();
+    ws = new WebSocket(url);
+    window.TurtleRace.sendBackend = (event,data) => {
+      if(ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({event,data}));
+    };
+    ws.onopen  = () => {
+      t0 = 0; setDot('wait', 'Servidor conectado; comprobando TikTok'); show('Servidor conectado', 2000);
+      window.TurtleRace.sendBackend('connect', { username: CONFIG.TIKTOK_USER });   // usuario por defecto: tortulive (?user= lo cambia)
+      sendPendingRaceResult();
+    };
+    ws.onclose = () => {
+      const left = CONFIG.RETRY_MAX_MS - (Date.now() - t0);
+      if(left > 0){ setDot('wait', 'Conectando…'); show('Reconectando… (' + Math.ceil(left/60000) + ' min restantes)'); timer = setTimeout(open, CONFIG.RETRY_MS); }
+      else { t0 = 0; setDot('fail', 'Falló tras 5 min'); show('Sin conexión · toca aquí o ⚙ para configurar'); }   // pasaron 5 min: deja de insistir
+    };
+    ws.onmessage = (m) => {
+      try{
+        const msg = JSON.parse(m.data), d = msg.data || msg, ev = msg.event || msg.type;
+        if(ev === 'race-history'){ initializeRace(d.countries); return; }
+        if(ev === 'race-result-saved'){
+          if(pendingRaceResult && pendingRaceResult.raceId === d.raceId) pendingRaceResult = null;
+          return;
+        }
+        if(ev === 'race-result-error'){ console.error('No se guardaron las interacciones por país:', d.error); return; }
+        const user = d.uniqueId || d.nickname || d.user || 'viewer', name = d.nickname || d.uniqueId || user;
+        const pic = d.profilePictureUrl || d.avatar || (d.user && d.user.profilePicture && d.user.profilePicture.url) || (d.profilePicture && d.profilePicture.url) || '';
+        if(ev === 'status'){
+          const live = document.getElementById('liveuser');
+          const un = d.username || CONFIG.TIKTOK_USER;
+          live.textContent = '@' + un;
+          live.title = 'Usuario TikTok: @' + un;
+          if(d.status === 'connected') setDot('ok', 'TikTok conectado: @' + (d.username || ''));
+          else if(d.status === 'failed') setDot('fail', d.error || 'No se pudo conectar con TikTok');
+          else if(d.status === 'idle') setDot('off', 'TikTok desconectado');
+          else setDot('wait', d.error || 'Conectando a TikTok…');
+        }
+        else if(ev === 'chat') onChat(user, d.comment || d.text || d.content || '', pic, name);
+        else if(ev === 'like') onLike(user, d.likeCount || d.count || 1, pic, name);
+        else if(ev === 'follow') onFollow(user, pic, name);
+        else if(ev === 'share') onShare(user, pic, name);
+        else if(ev === 'gift') onGift(user, d.repeatCount || d.count || 1, pic, name);
+      }catch(e){}
+    };
+  };
+  st.style.pointerEvents = 'auto'; st.style.cursor = 'pointer';
+  st.addEventListener('click', () => { if(!ws || ws.readyState === 3){ t0 = 0; setDot('wait', 'Conectando…'); open(); } });   // reintento manual
+  window.TurtleRace.retryWS = () => { t0 = 0; setDot('wait', 'Conectando…'); open(); };
+  open();
+}
+
+/* ⚙ Engranaje: abre el backend para configurar el usuario de TikTok.
+   URL: ?cfg=… ; si falta, se deduce de ?ws= (ws→http, ws://localhost:21213 → http://localhost:21213/); por defecto http://localhost:21213/ */
+(function(){
+  const b = document.getElementById('cfg');
+  const url = () => CONFIG.CFG_URL || (CONFIG.WS_URL ? CONFIG.WS_URL.replace(/^ws/i,'http') : 'http://localhost:21213/');
+  b.addEventListener('click', () => {
+    const w = window.open(url(), '_blank', 'noopener');
+    if(!w) location.href = url();                       // si el navegador (p. ej. OBS) bloquea la ventana, navega en la misma
+    if(window.TurtleRace.retryWS) window.TurtleRace.retryWS();   // y reactiva los reintentos de 5 min
+  });
+})();
+
+/* ============ PRUEBAS ============
+   Teclas 1–5 suman puntos a cada país · R reinicia · ?test=1 simula espectadores */
+document.addEventListener('keydown', e=>{
+  const i = parseInt(e.key,10);
+  const k = e.key==='0' ? 10 : i;
+  if(k>=1 && k<=COUNTRIES.length) addPoints(COUNTRIES[k-1].id, CONFIG.POINTS.chat, 'Test');
+  if(e.key.toLowerCase()==='r') reset();
+});
+window.addEventListener('resize', () => { render(); fitScreen(); });
+window.addEventListener('load', fitScreen);
+
+/* Ajusta todo el overlay a la pantalla vertical de TikTok Live (9:16): lo escala para que entre completo
+   en ancho y alto, centrado. En el navegador de OBS / Live Studio usa el mismo tamaño que la fuente (ej. 1080×1920). ?fit=0 lo desactiva. */
+function fitScreen(){
+  const q = new URLSearchParams(location.search);
+  if(q.get('countries') === '1') return;
+  if(q.get('safe') === '0'){ const r = document.documentElement.style; r.setProperty('--safe-t','10px'); r.setProperty('--safe-b','10px'); r.setProperty('--safe-l','10px'); r.setProperty('--safe-r','10px'); }
+  const app = document.getElementById('app');
+  if(q.get('fit') === '0'){ app.style.transform = app.style.marginLeft = app.style.marginTop = ''; return; }
+  app.style.transform = 'none'; app.style.marginLeft = '0'; app.style.marginTop = '0';
+  const w = app.offsetWidth, h = app.offsetHeight, k = Math.min(innerWidth / w, innerHeight / h);
+  app.style.transformOrigin = 'top left';
+  app.style.transform = `scale(${k})`;
+  app.style.marginLeft = Math.max(0, (innerWidth - w * k) / 2) + 'px';
+  app.style.marginTop = Math.max(0, (innerHeight - h * k) / 2) + 'px';
+}
+
+/* ============ PANEL DE PRUEBAS ============
+   Oculto por defecto (no sale en el stream). Se muestra con ?panel=1 o con la tecla T. */
+(function(){
+  const tp = document.getElementById('tp');
+  const NAMES = ['Ana','Luis','Majo','Diego','Sofi','Tomás','Lu','Fer','Nico','Cami','Rafa','Vale'];
+  /* Oculto por defecto. Para probar: ?panel=1 en la URL o la tecla T. */
+  if(new URLSearchParams(location.search).get('panel') === '1') tp.classList.add('on');
+  document.addEventListener('keydown', e=>{ if(e.key.toLowerCase()==='t') tp.classList.toggle('on'); });
+  const pickId = () => COUNTRIES[Math.random()*COUNTRIES.length|0].id;
+  function fire(kind){
+    const u = NAMES[Math.random()*NAMES.length|0], id = pickId();
+    moveTo(u, id);                       // el espectador queda en el país elegido
+    if(kind==='chat')   onChat(u, COUNTRIES.find(c=>c.id===id).name, '', u);
+    if(kind==='like')   onLike(u, 3, '', u);
+    if(kind==='follow') onFollow(u, '', u);
+    if(kind==='share')  onShare(u, '', u);
+    if(kind==='gift')   onGift(u, [1,1,5,12][Math.random()*4|0], '', u);
+  }
+  tp.addEventListener('click', e=>{
+    const b = e.target.closest('button[data-ev]'); if(!b) return;
+    const k = b.dataset.ev;
+    if(k==='burst'){ const ks=['chat','like','follow','share','gift']; for(let i=0;i<20;i++) setTimeout(()=>fire(ks[Math.random()*ks.length|0]), i*120); }
+    else if(k==='win'){
+      if(!racing) return;
+      let id = COUNTRIES[0].id; COUNTRIES.forEach(c=>{ if(state[c.id] > state[id]) id = c.id; });
+      seen('Test','','Test'); addPoints(id, CONFIG.GOAL - state[id], 'Test', 'chat');
+    }
+    else if(k==='next') reset();
+    else fire(k);
+  });
+})();
+
+if(new URLSearchParams(location.search).get('countries') === '1'){
+  document.documentElement.classList.add('countryDirectory');
+  document.getElementById('countryGrid').innerHTML = ALL_COUNTRIES
+    .map(country=>`<div class="country-card">${flagMini(country)}<span>${esc(country.name)}</span></div>`)
+    .join('');
+  document.querySelector('#countryDirectory h1').textContent += ` (${ALL_COUNTRIES.length})`;
+  document.getElementById('backToBackend').onclick = () => { location.href = '/'; };
+}else{
+  if(CONFIG.WS_URL){
+    connectWS(CONFIG.WS_URL);
+    setTimeout(()=>initializeRace([]), 5000);
+  }else initializeRace([]);
+  if(new URLSearchParams(location.search).get('test')){
+    setInterval(()=>{
+      if(COUNTRIES.length) onChat('fan'+(Math.random()*40|0), COUNTRIES[Math.random()*COUNTRIES.length|0].name);
+    }, 250);
+  }
+}
+</script>
+<script>
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){
+  navigator.serviceWorker.register('/sw.js').catch(error=>console.error('No se pudo registrar la app instalable',error));
+}
+let screenLock = null, requestingScreenLock = false;
+async function keepScreenOn(){
+  if(!('wakeLock' in navigator) || document.visibilityState!=='visible' || screenLock || requestingScreenLock) return;
+  requestingScreenLock = true;
+  try{
+    const lock = await navigator.wakeLock.request('screen');
+    screenLock = lock;
+    lock.addEventListener('release',()=>{ if(screenLock===lock) screenLock=null; });
+  }catch(error){ console.warn('No se pudo mantener la pantalla encendida',error); }
+  finally{ requestingScreenLock = false; }
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') keepScreenOn(); });
+keepScreenOn();
+</script>
+</body>
+</html>

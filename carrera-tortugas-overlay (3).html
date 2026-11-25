@@ -7,7 +7,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <title>Carrera de tortugas – Overlay</title>
 <style>
-  :root{--sand:#ecd49a;--sand2:#e3c78a;--ink:#2b3a1f;--leaf:#4f9d52;--panel:#dff3e4;--gut:122px;--lane:160px;--safe-t:0px;--safe-b:270px;--safe-l:12px;--safe-r:56px}
+  :root{--sand:#ecd49a;--sand2:#e3c78a;--ink:#2b3a1f;--leaf:#4f9d52;--panel:#dff3e4;--gut:8px;--lane:160px;--safe-t:0px;--safe-b:270px;--safe-l:12px;--safe-r:56px}
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:transparent;font-family:"Trebuchet MS","Segoe UI",sans-serif;overflow:hidden}
   /* LIENZO VERTICAL 9:16 (720×1280, se escala a 1080×1920 o a lo que sea). Zonas seguras = espacio que tapa la interfaz de TikTok Live: arriba (perfil/espectadores), abajo (chat/regalos) y derecha (botones). Ajustables en :root o con ?safe=0 */
@@ -21,34 +21,12 @@
   .lane{position:relative;flex:none;height:var(--lane);border:4px solid var(--edge,var(--leaf));border-radius:14px;overflow:visible}
   .lane{background-color:var(--l1,var(--sand));background-image:var(--pat,none);background-size:var(--psz,auto)}
   .lane:nth-child(even){background-color:var(--l2,var(--sand2))}
-  .lane::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--gut);background:var(--gt,#0001)}
-  .label{position:absolute;left:4px;top:4px;bottom:4px;width:114px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;z-index:3;color:var(--ink2,var(--ink))}
-  .label svg{width:22px;height:15px;border:1px solid var(--ink2,var(--ink));border-radius:3px;flex:none}
-  .label b{display:block;font-size:17px;line-height:1.1;max-width:114px;color:#fff;background:#000d;padding:5px 8px;border-radius:10px;text-shadow:0 1px 0 #000}
-  .fan-grid{display:grid;grid-template-columns:repeat(2,40px);grid-template-rows:repeat(2,40px);gap:3px;width:83px}
-  .fan-grid .avw{position:relative;width:40px;height:40px;margin:0}
-  .fan-grid .av{width:40px;height:40px;border-width:2px;border-color:var(--lc,#fff);box-shadow:0 0 0 1px #0007,0 0 6px var(--lc,#fff0)}
-  .fan-grid .av i{font-size:17px}
-  .fan-grid .ev{left:auto;right:-2px;bottom:-2px;margin:0;width:16px;height:16px;border-width:1px;font-size:9px}
-  .fan-grid .lv{position:absolute;left:-2px;top:-2px;z-index:3;min-width:18px;padding:0 2px;border-radius:6px;background:var(--lc);color:#1b1200;font-size:7px;font-weight:900;line-height:10px;text-align:center;border:1px solid #000a}
-  .fan-grid .mvp{position:absolute;left:50%;top:-17px;margin-left:-9px;font-size:18px;z-index:4;filter:drop-shadow(0 1px 0 #0008);animation:bob 1s ease-in-out infinite alternate}
-  .fan-grid .l4 .av{animation:aura 1.2s ease-in-out infinite alternate}
-  .fan-grid .more{position:absolute;right:-2px;bottom:-2px;margin:0;padding:2px 6px;font-size:14px;z-index:4}
-  .l1{--lc:#d9d9d9}.l2{--lc:#6fd36f}.l3{--lc:#4aa8ff}.l4{--lc:#ffc400}
-  @keyframes bob{to{transform:translateY(-4px)}}
-  @keyframes aura{to{box-shadow:0 0 0 2px #0007,0 0 18px 4px #ffc400}}
-  .hop{position:absolute;left:70px;top:-36px;z-index:7;display:flex;flex-direction:column;align-items:center;pointer-events:none;animation:hop 1.4s ease-out forwards}
-  .hop .av{width:40px;height:40px;border-width:2px;border-color:var(--lc,#fff);box-shadow:0 0 8px var(--lc,#fff)}
-  .hop .av i{font-size:17px}
-  .hop b{margin-top:-8px;padding:1px 9px;border-radius:10px;background:var(--lc);color:#1b1200;font-size:17px;font-weight:900;border:2px solid #000a;white-space:nowrap}
-  @keyframes hop{0%{opacity:0;transform:translateY(30px) scale(.4)}15%{opacity:1;transform:translateY(-6px) scale(1.25)}30%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-34px)}}
   .lane-num{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:4px;border-radius:50%;background:#fff;color:var(--ink);font-size:12px;line-height:1;font-weight:900;vertical-align:1px;text-shadow:none}
-  .label small{display:inline-block;margin-top:2px;font-size:10px;font-weight:800;color:#fff;background:#000a;padding:0 6px;border-radius:8px}
   .guide::after,.start::after,.finish::after{position:absolute;top:2px;font-size:9px;font-weight:800;color:var(--ink2,#0008);white-space:nowrap}
   .guide::after{content:attr(data-m);left:3px}
   .start::after{content:"0 m";left:4px}
   .finish::after{content:"100 m";right:14px}
-  .bar{order:-1;flex:none;margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:3px solid var(--leaf);border-radius:14px;padding:6px 8px 6px 14px;font-weight:800;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .bar{order:-3;flex:none;margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:3px solid var(--leaf);border-radius:14px;padding:6px 8px 6px 14px;font-weight:800;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
   .bar .low{color:#b25e00}
   .gift-count{position:absolute;right:calc(var(--safe-r) + 10px);bottom:calc(var(--safe-b) + 10px);z-index:20;min-width:76px;padding:4px 12px;border:3px solid #ffd75e;border-radius:14px;background:#000d;color:#fff;text-align:center;font-size:54px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;box-shadow:0 2px 10px #0008;pointer-events:none}
   #dot{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px var(--ink),0 0 8px var(--dc,#8a8f87);background:var(--dc,#8a8f87)}
@@ -83,15 +61,12 @@
   .guide{position:absolute;top:0;bottom:0;border-left:2px dashed var(--gl,#0004);pointer-events:none}
   .start{position:absolute;top:0;bottom:0;left:var(--gut);border-left:3px solid #fff;pointer-events:none;z-index:1}
   .finish{position:absolute;top:0;bottom:0;right:0;width:12px;z-index:1;background:repeating-conic-gradient(#111 0 25%,#fff 0 50%) 0 0/12px 12px}
-  .turtle{position:absolute;left:var(--gut);top:calc(var(--lane) - 147px - 3px);width:205px;height:147px;will-change:transform;z-index:2}
+  .turtle{position:absolute;left:var(--gut);top:0;width:120px;height:86px;will-change:transform;z-index:2}
   .turtle>svg{width:100%;height:100%;overflow:visible}
   .crown{position:absolute;right:2px;top:-2px;font-size:15px;opacity:0;transition:opacity .3s;filter:drop-shadow(0 1px 0 #0006)}
   .leader .crown{opacity:1}
-  .crew{position:absolute;left:0;top:-20px;height:60px;display:flex;align-items:center;z-index:3}
   .av{position:relative;flex:none;width:60px;height:60px;margin-left:0;border-radius:50%;border:2px solid #fff;overflow:hidden;
     display:inline-flex;align-items:center;justify-content:center;background:hsl(var(--h) 55% 42%);box-shadow:0 1px 3px #0006}
-  .crew .avw{position:relative;display:inline-flex;margin-left:-18px}
-  .crew .avw:first-child{margin-left:0}
   .ev{position:absolute;bottom:-7px;left:50%;margin-left:-12px;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--ink);display:grid;place-items:center;font-size:13px;line-height:1;font-style:normal;z-index:2}
   .ev.follow{background:#e6ffe6}.ev.share{background:#e8e3ff}
   .ev.chat{background:#e3f2ff}.ev.like{background:#ffe3ea}.ev.gift{background:#fff1c2}
@@ -99,9 +74,8 @@
   .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
   .avw.pop{animation:pop .5s cubic-bezier(.3,1.7,.5,1)}
   .av.big{width:34px;height:34px;margin:0;border-width:2px}.av.big i{font-size:14px}
-  .more{margin-left:4px;font-size:13px;font-weight:800;color:var(--ink);background:#fffc;border-radius:11px;padding:2px 7px}
   .nick{margin-left:7px;background:#000d;color:#fff;font-weight:800;font-size:17px;padding:5px 12px;border-radius:10px;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;animation:nick 2s forwards}
-  .gain{position:absolute;left:26px;top:44px;z-index:6;pointer-events:none;font-weight:900;font-size:14px;color:#fff;background:#000d;padding:2px 8px;border-radius:10px;white-space:nowrap;animation:gain 1.1s ease-out forwards}
+  .gain{position:absolute;left:14px;top:55%;z-index:6;pointer-events:none;font-weight:900;font-size:14px;color:#fff;background:#000d;padding:2px 8px;border-radius:10px;white-space:nowrap;animation:gain 1.1s ease-out forwards}
   .gain.turbo{font-size:18px;background:linear-gradient(90deg,#ff6a00,#ffb000);color:#2b1400;box-shadow:0 0 14px #ff8a00;animation:gainT 1.7s ease-out forwards}
   @keyframes gainT{0%{opacity:0;transform:translateY(10px) scale(.5)}15%{opacity:1;transform:scale(1.25)}30%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-22px)}}
   .turtle.turbo>svg{filter:drop-shadow(0 0 6px #ffb000) drop-shadow(0 0 14px #ff5a00)}
@@ -110,8 +84,6 @@
   @keyframes gain{0%{opacity:0;transform:translateY(8px) scale(.6)}18%{opacity:1;transform:translateY(0) scale(1.15)}35%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-18px)}}
   @keyframes pop{0%{transform:scale(.3) translateY(10px)}100%{transform:none}}
   @keyframes nick{0%{opacity:0;transform:translateX(-8px)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
-  .pct{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-weight:800;font-size:13px;color:#fff;background:#000a;padding:1px 8px;border-radius:9px;z-index:3}
-  .pct:empty{display:none}
   #winner{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:6px;z-index:5;background:#2b3a1fe6;color:#fff;text-align:center;font-weight:800}
   #winner.show{display:flex}
   #winner b{font-size:32px}
@@ -172,10 +144,55 @@
   #fiesta .nn:empty{display:none}
   #fiesta.mega .ed{border-width:3.4vw}
   #fiesta .fw{position:absolute;pointer-events:none;line-height:1}
+
+
+  /* FONDO GAMIFICADO: zonas por tramo, escenario que corre según ev/min, calor por dificultad, foco al líder, checkpoints */
+  #bgfx{position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:10px;pointer-events:none}
+  .zone{position:absolute;top:0;bottom:0}
+  .zone::before{content:"";position:absolute;inset:0;background:var(--zc);opacity:.12;transition:opacity .6s}
+  .zone:nth-child(1){--zc:#7be07b}.zone:nth-child(2){--zc:#ffe14d}.zone:nth-child(3){--zc:#ff9a2e}.zone:nth-child(4){--zc:#ff4d4d}
+  .zone.hit::before{opacity:.28;animation:zflash 1.1s ease-out}
+  .zone b{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:30px;line-height:1;opacity:.3;filter:grayscale(.2)}
+  @keyframes zflash{0%{opacity:.9}100%{opacity:.28}}
+  #heat{position:absolute;inset:0;opacity:var(--heat,0);background:radial-gradient(ellipse at 50% 125%,#ff3b00 0,#ff7a0066 42%,transparent 75%);animation:heatp var(--hp,2s) ease-in-out infinite alternate;transition:opacity 1s}
+  @keyframes heatp{from{filter:brightness(.75)}to{filter:brightness(1.35)}}
+  #scn{position:absolute;left:0;top:0;height:100%;width:200%;display:flex;animation:scn var(--sd,32s) linear infinite}
+  #scn .sg{position:relative;width:50%;height:100%}
+  #scn span{position:absolute;font-size:26px;opacity:.35}
+  @keyframes scn{to{transform:translateX(-50%)}}
+  #spot{position:absolute;left:0;right:0;height:60px;top:0;opacity:0;background:linear-gradient(180deg,transparent,#ffffff3a 50%,transparent);transition:top .5s,opacity .5s}
+  .cp{position:absolute;top:14px;width:30px;display:flex;flex-direction:column;align-items:center;animation:cpin .6s cubic-bezier(.3,1.7,.5,1)}
+  .cp svg{width:30px;height:21px;border:2px solid #fff;border-radius:4px;box-shadow:0 0 8px #ffd75e}
+  .cp i{font-style:normal;font-size:14px;margin-top:-3px;filter:drop-shadow(0 1px 0 #0008)}
+  @keyframes cpin{from{opacity:0;transform:translateY(-20px) scale(.3)}}
+  .lane.final .zone:nth-child(4)::before{animation:zpulse .5s ease-in-out infinite alternate}
+  .lane.final .finish{animation:fglow .4s ease-in-out infinite alternate}
+  @keyframes zpulse{from{opacity:.25}to{opacity:.6}}
+  @keyframes fglow{to{box-shadow:0 0 14px 4px #fff}}
+  @media (prefers-reduced-motion:reduce){#scn,#heat,.lane.final .zone:nth-child(4)::before,.lane.final .finish,.zone.hit::before,.cp{animation:none}}
+  /* TOP 20 */
+  .top20{order:-2;flex:none;margin:0 0 10px;padding:6px 8px 8px;border:3px solid var(--leaf);border-radius:14px;background:var(--panel);color:var(--ink)}
+  .top20 .tt2{display:block;margin:0 0 4px;font-size:13px;font-weight:900;text-align:center}
+  #topGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+  .tc{display:flex;align-items:center;gap:4px;height:28px;padding:0 5px;border-radius:8px;background:#fff;font-weight:900;font-size:13px;font-variant-numeric:tabular-nums;min-width:0}
+  .tc.empty{opacity:.35}
+  .tc.top1{background:#fff1c2}
+  .tc .rk{flex:none;width:15px;text-align:center;font-size:11px;opacity:.75}
+  .tc svg{flex:none;width:30px;height:21px;border:1px solid var(--ink);border-radius:3px}
+  .tc .sc{margin-left:auto;font-size:14px}
+  /* AVATARES ANCLADOS (no siguen a la tortuga) */
+  #pins{position:absolute;inset:0;z-index:30;pointer-events:none}
+  .pin{position:absolute;transition:opacity .4s}
+  .pin.out{opacity:0}
+  .pin .avw{position:relative;display:inline-flex;margin:0}
+  .pin .av{width:38px;height:38px;border-width:2px}
+  .pin .av i{font-size:16px}
+  .pin .ev{width:20px;height:20px;margin-left:-10px;font-size:11px;bottom:-8px}
 </style>
 </head>
 <body>
 <div id="app">
+  <div class="top20" id="top20"><strong class="tt2">🏆 TOP 20 · PUNTAJE</strong><div id="topGrid"></div></div>
   <div class="track" id="track">
     <div id="lanes"></div>
     <div id="winner"></div>
@@ -191,7 +208,7 @@
     <button id="reload" type="button" title="Recargar página" aria-label="Recargar página"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></svg></button>
     <button id="cfg" type="button" title="Configurar usuario de TikTok (backend)" aria-label="Abrir configuración del backend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </div>
-  <div class="comment-lane" aria-live="polite" aria-label="Últimos tres comentarios del chat">
+  <div class="comment-lane" hidden aria-live="polite" aria-label="Últimos tres comentarios del chat">
     <strong class="comment-title">💬 Últimos 3 comentarios</strong>
     <div id="commentFeed"></div>
   </div>
@@ -244,6 +261,7 @@ const CONFIG = {
   SHORT_WORD_LEN: 4,      // palabras de ≤4 letras: coincidencia exacta o similitud ≥ SHORT_WORD_SIM
   SHORT_WORD_SIM: .85,
   CREW_TTL: 15,        // segundos que un avatar se queda sobre su pista tras su último evento
+  DIFF_STEP: 50,       // DIFICULTAD: cada múltiplo de 50 ev/min duplica lo que cuesta llegar (50→×2, 100→×4, 150→×8…). 0 = desactivado
   LOW_RATE: 5,         // si hay menos de 5 eventos/min, las tortugas avanzan solas
   AUTO_MIN: 1, AUTO_MAX: 2,        // metros que avanza sola (una tortuga a la vez, al azar)
   AUTO_EVERY: [3000, 6000],        // cada cuántos ms (entre un valor y otro)
@@ -313,7 +331,7 @@ const POOL = [
  {id:'iq',name:'Irak',alias:['irak','iraq','🇮🇶'],flag:H(['#ce1126','#fff','#000'])+'<rect x="44" y="40" width="32" height="5" fill="#007a3d"/>'},
  {id:'bh',name:'Baréin',alias:['bahrein','baréin','bahrain','🇧🇭'],flag:R('#ce1126')+zig(48,'#fff')}
 ];
-const MIN_LANES = 3, MAX_LANES = 10;   // mínimo 3 países; admite hasta 10 si se nombran en el chat
+const MIN_LANES = 3, MAX_LANES = 20;   // mínimo 3 países; admite hasta 20 si se nombran en el chat
 const ALL_BASE = [...BASE, ...POOL];
 /* Catálogo completo (ONU + Palestina, Taiwán, Kosovo, Vaticano). Banderas simplificadas con un mini-lenguaje:
    H/V = franjas horizontales/verticales, R = color liso (letras = colores)  |  overlays: T/t triángulo, C/c círculo, Z círculo al asta,
@@ -621,7 +639,7 @@ function applyStyle(){
 }
 
 /* ============ ESTADO ============ */
-const state = {}, lastChoice = {}, likeAcc = {}, crew = {}, contrib = {}, countryInteractions = {}, profiles = {};
+const state = {}, lastChoice = {}, likeAcc = {}, contrib = {}, countryInteractions = {}, profiles = {};
 let racing = true, raceInitialized = false, bootedByDefault = false, liveActivity = false, resetTimer = 0;
 const lastChatAt = {};   // uniqueId → última vez que su comentario impulsó (cooldown anti-spam)
 /* Agrupa los render() de ráfagas de eventos en un solo requestAnimationFrame (dirty flag) */
@@ -630,7 +648,7 @@ function scheduleRender(){
   if(renderQueued) return; renderQueued = true;
   requestAnimationFrame(()=>{ renderQueued = false; render(); });
 }
-const GUT = 122, TW = 205;
+const GUT = 8; let TW = 120, ROW = 100;
 const esc = x => String(x).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const hue = x => [...String(x)].reduce((h,ch)=>(h*31+ch.charCodeAt(0))%360, 7);
 const nm = u => (profiles[u] && profiles[u].name) || u;
@@ -649,27 +667,58 @@ const act = {}, ICONS = {chat:'💬', like:'❤️', gift:'🎁', follow:'➕', 
 /* Avatar en círculo con la insignia de su último evento abajo (💬 comentario · ❤️ like · 🎁 regalo) */
 const avBadge = (u, cls='') => { const a = act[u] || {type:'chat'};
   return `<span class="avw ${cls}">${av(u)}<b class="ev ${a.type}">${ICONS[a.type]||'💬'}</b></span>`; };
-/* Muestra al espectador sobre la pista de su país con el ícono de lo que acaba de hacer */
+/* Avatar + ícono del evento sobre la tortuga, ANCLADO donde ocurrió (no se mueve con ella) */
+const pinOf = {}, PIN_W = 38, MAX_PINS = 40;
 function appear(id, user, type){
-  const l = crew[id]; if(!l) return;
-  const i = l.indexOf(user); if(i > -1) l.splice(i,1);
-  l.unshift(user); act[user] = {type, t:T0};
-  drawCrew(id, user);
+  const r = rig[id], layer = document.getElementById('pins'); if(!r || !layer) return;
+  act[user] = {type, t:T0};
+  if(pinOf[user]){ pinOf[user].remove(); delete pinOf[user]; }
+  const mine = [...layer.children].filter(p=>p.dataset.c===id);
+  const base = GUT + r.x + TW*.5 - PIN_W/2;
+  let x = base;
+  for(const d of [0,1,-1,2,-2,3,-3,4,-4]){
+    const cx = base + d*(PIN_W+4);
+    if(cx >= 0 && !mine.some(p=>Math.abs(parseFloat(p.style.left)-cx) < PIN_W)){ x = cx; break; }
+  }
+  const el = document.createElement('div');
+  el.className = 'pin'; el.dataset.c = id;
+  el.style.cssText = `left:${x}px;top:${(r.top||0)-30}px`;
+  el.innerHTML = avBadge(user, 'pop');
+  layer.appendChild(el); pinOf[user] = el;
+  while(layer.children.length > MAX_PINS){ const o = layer.firstElementChild; for(const k in pinOf) if(pinOf[k]===o) delete pinOf[k]; o.remove(); }
+  setTimeout(()=>el.classList.add('out'), CONFIG.CREW_TTL*1000 - 400);
+  setTimeout(()=>{ el.remove(); if(pinOf[user]===el) delete pinOf[user]; }, CONFIG.CREW_TTL*1000);
 }
 
-function laneMarkup(c,i){
-  return `
-    <div class="lane" id="lane-${c.id}">
+function laneMarkup(c){
+  return `<div class="turtle" id="t-${c.id}">${turtleSVG(c)}<span class="crown">👑</span><span class="emote" id="e-${c.id}"></span></div>`;
+}
+
+/* Fondo gamificado de la pista (zonas, escenario móvil, calor, foco al líder) */
+function bgMarkup(){
+  const icon = STYLES[styleIdx][1], set = [icon, icon, '✨', icon];
+  const group = '<div class="sg">' + Array.from({length:14},(_,i)=>`<span style="left:${(i*7.1+Math.random()*3).toFixed(1)}%;top:${(8+Math.random()*80)|0}%">${set[i%set.length]}</span>`).join('') + '</div>';
+  const zs = ['🌱','⚡','🔥','🏁'];
+  return `<div id="bgfx">${zs.map(z=>`<div class="zone"><b>${z}</b></div>`).join('')}<div id="heat"></div><div id="scn">${group}${group}</div><div id="spot"></div></div>`;
+}
+/* Checkpoint: la bandera de quien pasa primero cada hito (25/50/75 m) queda marcada en la pista */
+function checkpoint(m, id){
+  const c = COUNTRIES.find(x=>x.id===id), bg = document.getElementById('bgfx'); if(!c || !bg) return;
+  const el = document.createElement('div'); el.className = 'cp'; el.dataset.f = m/CONFIG.GOAL;
+  el.innerHTML = flagMini(c) + '<i>⭐</i>'; bg.appendChild(el);
+  toast(`🏁 ¡${esc(c.name)} pasa primero los ${m} m!`);
+  scheduleRender();
+}
+
+/* UNA SOLA PISTA para todas las tortugas */
+function buildDOM(){
+  document.getElementById('lanes').innerHTML = `<div class="lane" id="lane">
+      ${bgMarkup()}
       <div class="guide" data-f=".25" data-m="25 m"></div><div class="guide" data-f=".5" data-m="50 m"></div><div class="guide" data-f=".75" data-m="75 m"></div>
       <div class="start"></div><div class="finish"></div>
-      <div class="label"><b>${esc(c.name)}</b><div class="fan-grid" id="c-${c.id}"></div></div>
-      <div class="turtle" id="t-${c.id}">${turtleSVG(c)}<span class="crown">👑</span><span class="emote" id="e-${c.id}"></span></div>
-      <span class="pct" id="p-${c.id}"></span>
+      ${COUNTRIES.map(laneMarkup).join('')}
+      <div id="pins"></div>
     </div>`;
-}
-
-function buildDOM(){
-  document.getElementById('lanes').innerHTML = COUNTRIES.map(laneMarkup).join('');
 }
 
 function reset(){
@@ -677,10 +726,11 @@ function reset(){
   Object.keys(lastChatAt).forEach(k=>delete lastChatAt[k]);
   applyStyle();
   pickCountries();
+  Object.keys(pinOf).forEach(k=>delete pinOf[k]);
   buildDOM();
   makeRigs();
-  [state,likeAcc,crew,contrib,countryInteractions].forEach(o=>Object.keys(o).forEach(k=>delete o[k]));
-  COUNTRIES.forEach(c=>{ state[c.id]=0; crew[c.id]=[]; contrib[c.id]={}; countryInteractions[c.id]=0; });
+  [state,likeAcc,contrib,countryInteractions].forEach(o=>Object.keys(o).forEach(k=>delete o[k]));
+  COUNTRIES.forEach(c=>{ state[c.id]=0; contrib[c.id]={}; countryInteractions[c.id]=0; });
   document.getElementById('winner').classList.remove('show');
   racing = true; fxHit = {}; lastLead = null; render(); fitScreen();
   SFX.play('start');
@@ -700,16 +750,26 @@ function initializeRace(previousResults, fromHistory){
   reset();
 }
 
-/* Reparte el alto vertical disponible entre los carriles (mín. 150 px; el overlay se reescala para admitir hasta 10) */
+/* Una sola pista: reparte el alto entre las filas de tortugas (se achican si hay muchas) */
 function layoutVertical(){
-  const app = document.getElementById('app'), cs = getComputedStyle(document.documentElement), px = v => parseFloat(cs.getPropertyValue(v)) || 0;
-  const n = Math.max(1, COUNTRIES.length);
-  const commentLane = document.querySelector('.comment-lane');
-  const others = document.getElementById('bar').offsetHeight + 10 +
+  const cs = getComputedStyle(document.documentElement), px = v => parseFloat(cs.getPropertyValue(v)) || 0;
+  const commentLane = document.querySelector('.comment-lane'), top20 = document.getElementById('top20');
+  const others = top20.offsetHeight + 10 + document.getElementById('bar').offsetHeight + 10 +
     (commentLane.hidden ? 0 : commentLane.offsetHeight + 8);
-  const avail = 1280 - px('--safe-t') - px('--safe-b') - others - 8*(n-1);
-  const lh = Math.max(150, Math.min(230, Math.floor(avail / n)));
-  document.getElementById('track').style.setProperty('--lane', lh + 'px');
+  const laneH = Math.max(200, 1280 - px('--safe-t') - px('--safe-b') - others - 8);
+  const lane = document.getElementById('lane'); if(!lane) return;
+  lane.style.height = laneH + 'px';
+  const n = Math.max(1, COUNTRIES.length), PAD = 40, slot = (laneH - PAD - 14) / n;
+  ROW = slot;
+  const h = Math.max(38, Math.min(120, slot*1.5));
+  TW = Math.round(h*205/147);
+  COUNTRIES.forEach((c,i)=>{
+    const t = document.getElementById('t-'+c.id); if(!t) return;
+    const top = PAD + i*slot + (slot-h)/2;
+    t.style.width = TW + 'px'; t.style.height = Math.round(h) + 'px'; t.style.top = top + 'px'; t.style.zIndex = 2 + i;
+    if(rig[c.id]) rig[c.id].top = top;
+  });
+  document.querySelectorAll('#pins .pin').forEach(p=>{ const q = rig[p.dataset.c]; if(q) p.style.top = (q.top - 30) + 'px'; });
 }
 function setCommentBoxEnabled(enabled){
   const commentLane = document.querySelector('.comment-lane');
@@ -717,31 +777,36 @@ function setCommentBoxEnabled(enabled){
   render();
   fitScreen();
 }
+/* TOP 20: bandera + PUNTAJE TOTAL (metros acumulados), de mayor a menor */
+function renderTop20(){
+  const g = document.getElementById('topGrid'); if(!g) return;
+  const list = ALL_COUNTRIES.filter(c=>TOTAL[c.id] > 0).sort((a,b)=>TOTAL[b.id]-TOTAL[a.id]).slice(0,20);
+  const sig = list.map(c=>c.id+':'+TOTAL[c.id]).join();
+  if(g.dataset.sig === sig) return; g.dataset.sig = sig;
+  g.innerHTML = Array.from({length:20},(_,i)=>{ const c = list[i];
+    return c
+      ? `<div class="tc${i===0?' top1':''}"><span class="rk">${i+1}</span>${flagMini(c)}<span class="sc">${fmtPts(TOTAL[c.id])}</span></div>`
+      : `<div class="tc empty"><span class="rk">${i+1}</span><span class="sc">–</span></div>`; }).join('');
+}
 function render(){
+  renderTop20();
   layoutVertical();
+  if(!document.getElementById('lane')) return;
   const run = document.getElementById('track').clientWidth - GUT - TW - 16;
   document.querySelectorAll('.guide').forEach(g=>g.style.left = (GUT + TW + Number(g.dataset.f)*run) + 'px');
   const max = Math.max(...Object.values(state));
-  const members = {}; Object.values(lastChoice).forEach(id=>members[id]=(members[id]||0)+1);
+  { const lane = document.getElementById('lane'), W = lane.clientWidth, G = CONFIG.GOAL,
+      es = [GUT, ...[.25,.5,.75].map(f=>GUT + TW + f*run), W];
+    document.querySelectorAll('.zone').forEach((z,k)=>{ z.style.left = es[k] + 'px'; z.style.width = Math.max(0, es[k+1] - es[k]) + 'px'; z.classList.toggle('hit', k > 0 && max >= G*k/4); });
+    document.querySelectorAll('.cp').forEach(e=>e.style.left = (GUT + TW + Number(e.dataset.f)*run - 15) + 'px');
+    lane.classList.toggle('final', max >= G*.85);
+    const sp = document.getElementById('spot'), lead = COUNTRIES.find(c=>state[c.id]===max), q = lead && rig[lead.id];
+    if(sp){ if(max > 0 && q){ const hh = Math.max(ROW, 50); sp.style.opacity = 1; sp.style.height = hh + 'px'; sp.style.top = (q.top + q.el.offsetHeight/2 - hh/2) + 'px'; } else sp.style.opacity = 0; } }
   COUNTRIES.forEach(c=>{
-    const t = document.getElementById('t-'+c.id);
+    const t = document.getElementById('t-'+c.id); if(!t) return;
     if(rig[c.id]) rig[c.id].target = Math.min(state[c.id]/CONFIG.GOAL,1)*run;
     t.classList.toggle('leader', max>0 && state[c.id]===max);
-    document.getElementById('p-'+c.id).textContent = state[c.id] ? state[c.id] + ' m' : '';
   });
-}
-
-/* Se muestran hasta doce avatares por país; el resto se resume en +N. */
-/* Nivel del espectador según los metros que aportó en esta carrera */
-const MAX_VISIBLE_AVATARS = 12;
-const LV_AT = [0,3,10,25], lvOf = (id,u) => { const m = (contrib[id]||{})[u]||0; let n = 0; LV_AT.forEach((v,i)=>{ if(m>=v) n=i; }); return n+1; };
-function drawCrew(id, pop){
-  const list = [...crew[id]].sort((a,b)=>((contrib[id]||{})[b]||0)-((contrib[id]||{})[a]||0));
-  const N = Math.min(list.length, MAX_VISIBLE_AVATARS), shown = list.slice(0,N), top = (contrib[id]||{})[shown[0]] > 0 ? shown[0] : null;
-  document.getElementById('c-'+id).innerHTML = shown.map(u=>{
-    const L = lvOf(id,u);
-    return avBadge(u, (u===pop?'pop ':'') + 'l'+L).replace('</span><b class="ev', `<i class="lv">Nv${L}</i>${u===top?'<s class="mvp">👑</s>':''}</span><b class="ev`);
-  }).join('') + (list.length>N ? `<span class="more">+${list.length-N}</span>` : '');
 }
 
 /* ============ FÍSICA ============
@@ -776,8 +841,8 @@ function addCountryToRace(country){
   if(COUNTRIES.length>=MAX_LANES || !racing) return false;
   const added={...country};
   COUNTRIES.push(added);
-  state[added.id]=0; crew[added.id]=[]; contrib[added.id]={}; countryInteractions[added.id]=0;
-  document.getElementById('lanes').insertAdjacentHTML('beforeend', laneMarkup(added, COUNTRIES.length-1));
+  state[added.id]=0; contrib[added.id]={}; countryInteractions[added.id]=0;
+  document.getElementById('pins').insertAdjacentHTML('beforebegin', laneMarkup(added));
   makeRig(added);
   render(); fitScreen();
   SFX.play('join'); toast(`🌍 ¡${esc(added.name)} entra a la carrera!`);
@@ -808,11 +873,6 @@ function unsay(r){ r.em.className = 'emote'; r.em.textContent = ''; }
 function react(r, mood, dur, emoji){ r.ov = mood; r.ovUntil = T0 + dur; if(emoji) say(r, emoji); }
 
 function moods(){ // se evalúa 4 veces por segundo
-  COUNTRIES.forEach(c=>{ // los avatares salen de la pista tras CREW_TTL s sin actividad
-    const l = crew[c.id]; if(!l || !l.length) return;
-    const keep = l.filter(u => T0 - (act[u] ? act[u].t : 0) < CONFIG.CREW_TTL);
-    if(keep.length !== l.length){ crew[c.id] = keep; drawCrew(c.id); }
-  });
   const vals = COUNTRIES.map(c=>state[c.id]), max = Math.max(...vals);
   const ld = max >= 8 ? COUNTRIES.filter(c=>state[c.id]===max) : [];
   if(racing && ld.length === 1){ if(lastLead && lastLead !== ld[0].id){ SFX.play('lead'); toast(`👑 ¡${esc(ld[0].name)} toma la delantera!`); } lastLead = ld[0].id; }
@@ -916,12 +976,22 @@ function evPerMin(){ // chats + likes + regalos en los últimos 60 s (proyectado
   while(evts.length && now - evts[0] > 60000) evts.shift();
   return evts.length * 60 / Math.min(60, Math.max(10, (now - t0)/1000));
 }
+/* Multiplicador de dificultad: 2^(múltiplos de DIFF_STEP ev/min). Los metros ganados se dividen entre este valor */
+function diffMult(){ const st = CONFIG.DIFF_STEP; return st > 0 ? Math.pow(2, Math.floor(evPerMin()/st)) : 1; }
 function tick(){
   const sec = Math.floor((Date.now() - t0)/1000), r = evPerMin(), low = r < CONFIG.LOW_RATE;
   document.getElementById('clock').textContent = `⏱ ${pad(sec/3600|0)}:${pad(sec/60%60|0)}:${pad(sec%60)}`;
   const el = document.getElementById('rate');
-  el.textContent = `⚡ ${Math.round(r)} ev/min` + (low ? ' · auto' : '');
+  const dm = diffMult();
+  el.textContent = `⚡ ${Math.round(r)} ev/min` + (low ? ' · auto' : '') + (dm > 1 ? ` · 🔥×${dm}` : '');
   el.classList.toggle('low', low);
+  { const lane = document.getElementById('lane');   // el fondo reacciona a la actividad: escenario más rápido y más "calor" con la dificultad
+    if(lane){
+      const sd = Math.max(5, Math.round(32/(1 + r/25))), lv = Math.log2(dm);
+      if(lane.dataset.sd != sd){ lane.dataset.sd = sd; lane.style.setProperty('--sd', sd + 's'); }
+      lane.style.setProperty('--heat', Math.min(.6, lv*.16).toFixed(2));
+      lane.style.setProperty('--hp', Math.max(.5, 2/(1+lv)).toFixed(2) + 's');
+    } }
 }
 setInterval(tick, 500);
 document.getElementById('reload').addEventListener('click', () => location.reload());
@@ -1024,6 +1094,10 @@ const SFX = (() => {
 let fxHit = {}, lastLead = null, lastWinner = null, streak = 0, giftLv = 1, cN = 0, cT = 0;
 const COMBOS = [5,10,20,40,80];
 const WINS = (()=>{ try{ return JSON.parse(localStorage.getItem('tr_wins')) || {}; }catch(e){ return {}; } })();
+/* PUNTAJE TOTAL por país (metros acumulados de todas las carreras, guardado en el navegador) */
+const TOTAL = (()=>{ try{ return JSON.parse(localStorage.getItem('tr_pts')) || {}; }catch(e){ return {}; } })();
+const saveTotals = () => { try{ localStorage.setItem('tr_pts', JSON.stringify(TOTAL)); }catch(e){} };
+const fmtPts = n => { const f = (v,u) => (v >= 100 ? Math.round(v) : v.toFixed(1).replace('.0','')) + u; return n >= 1e6 ? f(n/1e6,'M') : n >= 1000 ? f(n/1000,'K') : String(n); };   // 1.2K · 15K · 150K · 1.5M
 const saveWins = () => { try{ localStorage.setItem('tr_wins', JSON.stringify(WINS)); }catch(e){} };
 function toast(html, cls=''){
   const box = document.getElementById('toasts'); if(!box) return;
@@ -1176,12 +1250,14 @@ const stoch = x => Math.floor(x) + (Math.random() < x % 1 ? 1 : 0);   // redonde
 function addPoints(id, pts, user, type){
   if(!racing || !(id in state)) return;
   if(type !== 'gift') pts = stoch(pts * catchUp(id));   // los regalos no se ajustan
+  const dm = diffMult(); if(dm > 1) pts = stoch(pts / dm);   // más ev/min = más difícil llegar
   if(pts <= 0){ if(user){ SFX.play(type || 'chat'); appear(id, user, type || 'chat'); } scheduleRender(); return; }
   const before = state[id];
   state[id] += pts;
+  if(user){ TOTAL[id] = (TOTAL[id]||0) + pts; saveTotals(); }
   kick(id);
   if(user) SFX.play(type || 'chat');
-  [25,50,75].forEach(m=>{ if(before < m && state[id] >= m && !fxHit[m]){ fxHit[m] = 1; SFX.play('milestone'); } });
+  [25,50,75].forEach(m=>{ if(before < m && state[id] >= m && !fxHit[m]){ fxHit[m] = 1; SFX.play('milestone'); checkpoint(m, id); } });
   if(state[id] >= CONFIG.GOAL*.85 && state[id] < CONFIG.GOAL && !fxHit.f){ fxHit.f = 1; SFX.play('final'); }
   if(user){
     contrib[id][user] = (contrib[id][user]||0) + pts;
@@ -1200,12 +1276,7 @@ function gainFx(id, pts, type, user){
   const tb = type === 'gift';
   g.className = 'gain' + (tb ? ' turbo' : ''); g.textContent = tb ? `🚀 TURBO +${pts} m` : `${ICONS[type]||''} +${pts} m`;
   t.appendChild(g); setTimeout(()=>g.remove(), tb ? 1800 : 1200);
-  if(user){ // el avatar del espectador salta sobre la tortuga con su nivel
-    t.querySelectorAll('.hop').forEach(h=>h.remove());
-    const h = document.createElement('div'), L = lvOf(id,user);
-    h.className = 'hop l'+L; h.innerHTML = av(user) + `<b>Nv${L} · +${pts} m</b>`;
-    t.appendChild(h); setTimeout(()=>h.remove(), 1400);
-  }
+
 }
 
 function prepareNextRace(){
@@ -1248,7 +1319,7 @@ function win(id){
     .map((x,i)=>`<div class="pod"><span>${['🥇','🥈','🥉'][i]}</span>${flagMini(x)}<em>${esc(x.name)}</em><small>${Math.min(state[x.id],CONFIG.GOAL)} m</small></div>`).join('');
   const fans = Object.values(lastChoice).filter(x=>x===id).length;
   w.innerHTML = `<div class="wf">${flagMini(c)}</div><b>🏆 ${esc(c.name)}</b>
-    <span>🏅 ${WINS[id]} victoria${WINS[id]>1?'s':''}${streak>1?` · 🔥 racha ×${streak}`:''}${fans?` · 👥 ${fans} hinchas`:''}</span>
+    <span>⭐ ${fmtPts(TOTAL[id]||0)} puntos${fans?` · 👥 ${fans} hinchas`:''}</span>
     <div class="podium">${pod}</div>
     <span>Ellos lo llevaron a la meta</span>
     <div class="mvps">${top.map(([u,p],i)=>`<div class="mvp">${av(u,'big')}<em>${['⭐','🥈','🥉'][i]} ${esc(nm(u))}</em><small>${p} m</small></div>`).join('')}</div>
@@ -1260,7 +1331,6 @@ function win(id){
 /* Cambia de país a un espectador (lo saca de la tripulación anterior) */
 function moveTo(user, id){
   const prev = lastChoice[user];
-  if(prev && prev!==id && crew[prev]){ crew[prev] = crew[prev].filter(u=>u!==user); drawCrew(prev); }
   lastChoice[user] = id;
 }
 
